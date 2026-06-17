@@ -1,16 +1,47 @@
-# React + Vite
+# ChatSphere - A real time Team communication platform frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+ChatSphere is the frontend application for a real-time team communication platform. It provides an intuitive UI for channels, direct messages, presence, and real-time message updates.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Real-time messaging (channels & direct messages)
+- Presence indicators (online/offline)
+- Threaded conversations and message history
+- User profiles and basic settings
+- Responsive UI for desktop and mobile
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React (hooks & context)
+- WebSocket or Socket.IO for realtime updates
+- CSS Modules / Styled Components (or project-specific styling)
+- Axios or fetch for REST API calls
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1. Clone the repository
+2. Install dependencies: `npm install` or `yarn`
+3. Create a .env file with API and socket endpoints as required by the project
+4. Run the app: `npm start` or `yarn start`
+
+## Folder Structure (example)
+
+- src/
+
+  - components/      # React components
+    - pages/           # Page-level components / routes
+    - services/        # API and websocket services
+    - context/         # React contexts (auth, socket, theme)
+    - hooks/           # Reusable hooks
+    - styles/          # Global styles and theme
+
+## Contributing
+
+Contributions are welcome. Please open issues or pull requests with clear descriptions of changes.
+
+## License
+
+Specify project license (e.g., MIT) in LICENSE file.
+
+---
+Generated README for the ChatSphere frontend project.
