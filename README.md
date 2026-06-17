@@ -44,4 +44,3 @@ Contributions are welcome. Please open issues or pull requests with clear descri
 Specify project license (e.g., MIT) in LICENSE file.
 
 ---
-Generated README for the ChatSphere frontend project.
