@@ -1,0 +1,101 @@
+.lv-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-family: var(--font-body);
+  letter-spacing: 0.01em;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+  white-space: nowrap;
+}
+
+.lv-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.99);
+}
+
+.lv-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.lv-btn--full { width: 100%; }
+
+/* Sizes */
+.lv-btn--sm { padding: 7px 14px; font-size: 13px; }
+.lv-btn--md { padding: 11px 22px; font-size: 15px; }
+.lv-btn--lg { padding: 15px 30px; font-size: 16px; }
+
+/* Variants */
+.lv-btn--primary {
+  background: var(--marquee);
+  color: var(--ink);
+  box-shadow: 0 4px 18px var(--marquee-glow);
+}
+.lv-btn--primary:hover:not(:disabled) {
+  background: #ff6e52;
+  box-shadow: 0 6px 22px var(--marquee-glow);
+}
+
+.lv-btn--secondary {
+  background: var(--velvet-violet);
+  color: var(--cream);
+  box-shadow: 0 4px 18px var(--violet-glow);
+}
+.lv-btn--secondary:hover:not(:disabled) {
+  background: #8d7eff;
+}
+
+.lv-btn--ghost {
+  background: transparent;
+  color: var(--cream);
+  border: 1.5px solid var(--velvet);
+}
+.lv-btn--ghost:hover:not(:disabled) {
+  border-color: var(--mute);
+  background: var(--ink-raised);
+}
+
+.lv-btn--danger {
+  background: transparent;
+  color: var(--danger);
+  border: 1.5px solid rgba(255, 107, 107, 0.4);
+}
+.lv-btn--danger:hover:not(:disabled) {
+  background: rgba(255, 107, 107, 0.08);
+}
+
+.lv-btn--text {
+  background: transparent;
+  color: var(--mute);
+  padding: 4px 6px;
+}
+.lv-btn--text:hover:not(:disabled) {
+  color: var(--cream);
+}
+
+.lv-btn__spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.25);
+  border-top-color: currentColor;
+  animation: lv-spin 0.7s linear infinite;
+}
+
+.lv-btn--secondary .lv-btn__spinner,
+.lv-btn--ghost .lv-btn__spinner,
+.lv-btn--danger .lv-btn__spinner {
+  border: 2px solid var(--velvet);
+  border-top-color: var(--cream);
+}
+
+@keyframes lv-spin {
+  to { transform: rotate(360deg); }
+}
+
+.lv-btn__label--loading {
+  opacity: 0.85;
+}
