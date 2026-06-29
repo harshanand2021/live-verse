@@ -1,0 +1,148 @@
+.room-list-page {
+  padding: 48px 0 80px;
+}
+
+.marquee-hero {
+  padding-bottom: 40px;
+  border-bottom: 1px solid var(--velvet);
+  margin-bottom: 36px;
+}
+
+.marquee-hero__eyebrow {
+  color: var(--marquee);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  margin-bottom: 10px;
+}
+
+.marquee-hero__title {
+  font-size: clamp(38px, 6vw, 64px);
+  color: var(--cream);
+  margin-bottom: 14px;
+}
+
+.marquee-hero__sub {
+  color: var(--cream-dim);
+  font-size: 16px;
+  max-width: 560px;
+  line-height: 1.55;
+  margin-bottom: 28px;
+}
+
+.marquee-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+}
+
+.join-code-box {
+  display: flex;
+  gap: 10px;
+}
+
+.join-code-box input {
+  background: var(--ink-raised);
+  border: 1.5px solid var(--velvet);
+  border-radius: var(--radius-md);
+  padding: 0 16px;
+  color: var(--cream);
+  font-size: 14px;
+  width: 220px;
+}
+
+.join-code-box input::placeholder {
+  color: var(--mute);
+}
+
+.join-code-box input:focus {
+  border-color: var(--velvet-violet);
+  outline: none;
+}
+
+.room-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.room-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.room-filter {
+  background: var(--ink-raised);
+  border: 1.5px solid var(--velvet);
+  color: var(--cream-dim);
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.room-filter:hover {
+  border-color: var(--mute);
+  color: var(--cream);
+}
+
+.room-filter--active {
+  background: var(--marquee);
+  border-color: var(--marquee);
+  color: var(--ink);
+}
+
+.room-search {
+  background: var(--ink-raised);
+  border: 1.5px solid var(--velvet);
+  border-radius: var(--radius-md);
+  padding: 9px 16px;
+  color: var(--cream);
+  font-size: 14px;
+  width: 240px;
+}
+
+.room-search::placeholder {
+  color: var(--mute);
+}
+
+.room-search:focus {
+  border-color: var(--marquee);
+  outline: none;
+}
+
+.room-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 22px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 80px 20px;
+  border: 1.5px dashed var(--velvet);
+  border-radius: var(--radius-lg);
+}
+
+.empty-state h3 {
+  font-size: 22px;
+  color: var(--cream);
+  margin-bottom: 10px;
+}
+
+.empty-state p {
+  color: var(--mute);
+  font-size: 14.5px;
+}
+
+@media (max-width: 600px) {
+  .room-search { width: 100%; }
+  .room-controls { flex-direction: column; align-items: stretch; }
+  .join-code-box { flex-direction: column; width: 100%; }
+  .join-code-box input { width: 100%; }
+}
