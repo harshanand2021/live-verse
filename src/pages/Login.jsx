@@ -1,37 +1,65 @@
-import { useState } from "react";
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import Logo from '../components/Logo';
+import Button from '../components/Button';
+import './styles/AuthPages.css';
 
-function Login() {
-  const [form, setForm] = useState({
-    email: "",
-    password: "",
-  });
+export default function Login() {
+  const { login, authLoading, authError } = useAuth();
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const ok = await login(email, password);
+    if (ok) navigate('/rooms');
+  };
 
   return (
-    <div className="flex justify-center items-center h-screen bg-[#313338]">
-      <div className="bg-[#1E1F22] p-8 rounded-xl w-96">
-        <h2 className="text-3xl font-bold mb-6">
-          Login
-        </h2>
+    <div className="auth-page">
+      <div className="auth-page__backdrop" aria-hidden="true" />
+      <div className="auth-card">
+        <Link to="/" className="auth-card__logo">
+          <Logo size="lg" />
+        </Link>
+        <p className="auth-card__tagline">Your seat is waiting. Step up to the box office.</p>
 
-        <input
-          className="w-full p-3 mb-4 rounded bg-[#2B2D31]"
-          placeholder="Email"
-        />
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <label className="auth-field">
+            <span>Email</span>
+            <input
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+            />
+          </label>
 
-        <input
-          type="password"
-          className="w-full p-3 mb-4 rounded bg-[#2B2D31]"
-          placeholder="Password"
-        />
+          <label className="auth-field">
+            <span>Password</span>
+            <input
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+            />
+          </label>
 
-        <button
-          className="w-full bg-[#5865F2] p-3 rounded"
-        >
-          Login
-        </button>
+          {authError ? <p className="auth-error" role="alert">{authError}</p> : null}
+
+          <Button type="submit" fullWidth loading={authLoading}>
+            Take Your Seat
+          </Button>
+        </form>
+
+        <p className="auth-switch">
+          New to Live-Verse? <Link to="/signup">Get a ticket</Link>
+        </p>
       </div>
     </div>
   );
 }
-
-export default Login;
