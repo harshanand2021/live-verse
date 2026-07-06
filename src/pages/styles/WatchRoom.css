@@ -1,76 +1,127 @@
-.watch-room-page {
+/* ─── Page shell ───────────────────────────────────────────── */
+.watch-room {
   display: flex;
   flex-direction: column;
   flex: 1;
-  padding: 20px 0 24px;
   min-height: 0;
+  padding-bottom: 32px;
 }
 
+.watch-room--fullscreen {
+  padding-bottom: 0;
+}
+
+/* ─── Top bar ──────────────────────────────────────────────── */
 .watch-room__topbar {
   display: flex;
   align-items: center;
-  gap: 24px;
-  margin-bottom: 18px;
+  gap: 20px;
+  padding-top: 16px;
+  padding-bottom: 14px;
   flex-wrap: wrap;
 }
 
 .watch-room__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
   font-weight: 600;
   color: var(--mute);
+  transition: color 0.15s;
   flex-shrink: 0;
-  transition: color 0.15s ease;
+  white-space: nowrap;
 }
 
-.watch-room__back:hover {
-  color: var(--cream);
+.watch-room__back:hover { color: var(--cream); }
+
+.watch-room__info {
+  flex: 1;
+  min-width: 0;
 }
 
-.watch-room__title-block h2 {
-  font-size: 19px;
+.watch-room__title {
+  font-size: 18px;
   color: var(--cream);
   text-transform: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.watch-room__title-block p {
-  font-size: 12.5px;
+.watch-room__meta {
+  font-size: 12px;
   color: var(--mute);
-  margin-top: 3px;
+  margin-top: 2px;
   display: flex;
-  gap: 10px;
   align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
+
+.watch-room__meta strong { color: var(--cream-dim); font-weight: 600; }
 
 .watch-room__code {
+  background: rgba(124, 107, 255, 0.12);
   color: var(--velvet-violet);
-  background: rgba(124, 107, 255, 0.1);
   padding: 2px 8px;
-  border-radius: 5px;
+  border-radius: 4px;
+  font-size: 11px;
 }
 
-.watch-room__layout {
+.watch-room__host-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+  background: var(--velvet-violet);
+  padding: 4px 10px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+/* ─── Main body layout ─────────────────────────────────────── */
+/*
+  Wireframe: [screen + seats (left, wide)] | [chat (right, fixed width)]
+  The left col is a column: ScreenPlayer on top, TheatreSeats below, HostControls below that.
+  In fullscreen: left col fills the viewport, chat floats as overlay.
+*/
+.watch-room__body {
   display: grid;
-  grid-template-columns: 1fr 340px;
-  gap: 20px;
-  flex: 1;
-  min-height: 0;
+  grid-template-columns: 1fr 320px;
+  gap: 18px;
+  align-items: start;
+  margin-top: 4px;
 }
 
-.watch-room__screen-col {
+/* Fullscreen: no grid, left fills all, chat is position:fixed overlay (handled in ChatPanel.css) */
+.watch-room--fullscreen .watch-room__body {
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+
+.watch-room__left {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  min-height: 0;
+  gap: 14px;
+  min-width: 0;
 }
 
-@media (max-width: 980px) {
-  .watch-room__layout {
+/* ─── Responsive ───────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .watch-room__body {
     grid-template-columns: 1fr;
   }
-  .watch-room-page {
-    height: auto;
+
+  /* On mobile, chat goes below seats */
+  .watch-room__body > .chat-panel {
+    height: 420px;
   }
-  .watch-room__layout .chat-panel {
-    height: 480px;
-  }
+}
+
+@media (max-width: 600px) {
+  .watch-room__topbar { gap: 12px; }
+  .watch-room__title  { font-size: 15px; }
 }
