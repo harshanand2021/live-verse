@@ -1,0 +1,421 @@
+/* ─── Outer shell ──────────────────────────────────────────── */
+.theatre-seats {
+  display: flex;
+  flex-direction: column;
+  background: #0d0b10;
+  border: 1px solid var(--velvet);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ─── Screen arch ──────────────────────────────────────────── */
+.ts-screen-arch {
+  position: relative;
+  height: 100px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: linear-gradient(to bottom, #1a0808 0%, #0d0b10 100%);
+}
+
+/* Velvet curtains on each side */
+.ts-screen-arch__curtain {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 60px;
+  z-index: 2;
+}
+
+.ts-screen-arch__curtain--left {
+  left: 0;
+  background: linear-gradient(to right, #3d0a0a 0%, #1a0505 60%, transparent 100%);
+  border-right: 3px solid rgba(255, 60, 60, 0.35);
+  box-shadow: inset -10px 0 20px rgba(180, 0, 0, 0.15);
+}
+
+.ts-screen-arch__curtain--right {
+  right: 0;
+  background: linear-gradient(to left, #3d0a0a 0%, #1a0505 60%, transparent 100%);
+  border-left: 3px solid rgba(255, 60, 60, 0.35);
+  box-shadow: inset 10px 0 20px rgba(180, 0, 0, 0.15);
+}
+
+/* The actual screen frame — curved bottom */
+.ts-screen-arch__frame {
+  position: absolute;
+  left: 60px;
+  right: 60px;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Curved bottom border = cinema screen curve */
+  border-bottom: 3px solid rgba(200, 160, 100, 0.55);
+  border-left:   2px solid rgba(200, 160, 100, 0.25);
+  border-right:  2px solid rgba(200, 160, 100, 0.25);
+  border-radius: 0 0 80% 80% / 0 0 40px 40px;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 200, 120, 0.07) 0%,
+    rgba(255, 200, 120, 0.02) 50%,
+    transparent 100%
+  );
+  box-shadow:
+    inset 0 -6px 24px rgba(255, 200, 100, 0.12),
+    0 4px 20px rgba(255, 180, 60, 0.18);
+}
+
+.ts-screen-arch__glow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(ellipse 80% 40% at 50% 0%, rgba(255,220,140,0.12), transparent 70%);
+}
+
+.ts-screen-arch__label {
+  position: relative;
+  z-index: 1;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: rgba(200, 160, 100, 0.7);
+  text-transform: uppercase;
+  padding-bottom: 18px;
+}
+
+/* ─── Main layout: floor + legend ──────────────────────────── */
+.ts-main {
+  display: flex;
+  gap: 0;
+  align-items: stretch;
+  min-height: 0;
+}
+
+/* ─── Floor (perspective container for seats) ──────────────── */
+.ts-floor {
+  flex: 1;
+  padding: 14px 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-x: auto;
+  /* Subtle perspective tilt — the seats "recede" toward the screen */
+  background:
+    radial-gradient(ellipse 90% 50% at 50% 0%, rgba(255,180,60,0.04), transparent 60%),
+    linear-gradient(to bottom, #111018 0%, #0d0b10 100%);
+}
+
+/* ─── Section block ─────────────────────────────────────────── */
+.ts-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ts-section__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 2px;
+}
+
+.ts-section__line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--velvet), transparent);
+}
+
+.ts-section__label-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+.ts-section__tier {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--marquee);
+  text-transform: uppercase;
+}
+
+.ts-section__sub {
+  font-size: 9.5px;
+  color: var(--mute);
+}
+
+/* ─── Row ───────────────────────────────────────────────────── */
+.ts-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.ts-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ts-row__label {
+  width: 18px;
+  font-size: 11px;
+  color: var(--mute);
+  text-align: center;
+  flex-shrink: 0;
+  letter-spacing: 0.03em;
+}
+
+.ts-row__label--right {
+  /* mirror on right — shows row letter on both sides like real cinemas */
+  width: 7px;
+  font-size: 10px;
+}
+
+.ts-row__seats {
+  display: flex;
+  gap: 5px;
+  flex-wrap: nowrap;
+}
+
+/* ─── Individual seat ───────────────────────────────────────── */
+.seat {
+  width: 32px;
+  height: 30px;
+  border-radius: 5px 5px 4px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  cursor: default;
+  font-size: 9px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.01em;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.1s ease;
+  /* Bottom "seat leg" shadow for 3-D depth */
+  box-shadow: 0 3px 0 rgba(0,0,0,0.55), 0 4px 6px rgba(0,0,0,0.4);
+  border: none;
+}
+
+/* Seat top-edge highlight — the backrest "lip" */
+.seat::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 2px;
+  right: 2px;
+  height: 4px;
+  border-radius: 3px 3px 0 0;
+  background: rgba(255,255,255,0.18);
+}
+
+/* The number label */
+.seat__num {
+  position: relative;
+  z-index: 1;
+  line-height: 1;
+  padding-top: 2px; /* push below the backrest highlight */
+}
+
+/* Hover / focus on interactive seats */
+.seat--hovered,
+.seat--available:hover,
+.seat--available:focus-visible {
+  transform: translateY(-3px) scale(1.1);
+  z-index: 10;
+  outline: none;
+}
+
+/* ── Status colours ── */
+
+/* Available — green, like BookMyShow */
+.seat--available {
+  background: #1e7e34;
+  color: #d4f5db;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #0f3d1a, 0 4px 8px rgba(30,126,52,0.3);
+}
+.seat--available:hover,
+.seat--available:focus-visible {
+  background: #25a244;
+  box-shadow: 0 3px 0 #0f3d1a, 0 6px 14px rgba(37,162,68,0.45);
+}
+.seat--available::before { background: rgba(255,255,255,0.25); }
+
+/* Occupied — orange-amber, someone is watching */
+.seat--occupied {
+  background: #b07d1a;
+  color: #fff4d4;
+  cursor: not-allowed;
+  box-shadow: 0 3px 0 #5c3e06, 0 4px 6px rgba(176,125,26,0.3);
+}
+.seat--occupied::before { background: rgba(255,220,100,0.2); }
+
+/* Host seat — marquee red-orange */
+.seat--host {
+  background: #c2390f;
+  color: #ffe8e0;
+  cursor: not-allowed;
+  box-shadow: 0 3px 0 #6b1c04, 0 4px 8px rgba(255,90,60,0.4);
+}
+.seat--host::before { background: rgba(255,150,100,0.25); }
+
+/* Your seat — bright glowing green */
+.seat--you {
+  background: #0fa846;
+  color: #fff;
+  cursor: not-allowed;
+  box-shadow: 0 3px 0 #065c24, 0 0 12px rgba(15,168,70,0.55), 0 4px 8px rgba(0,0,0,0.4);
+  animation: you-pulse 2.4s ease-in-out infinite;
+}
+.seat--you::before { background: rgba(255,255,255,0.35); }
+
+@keyframes you-pulse {
+  0%, 100% { box-shadow: 0 3px 0 #065c24, 0 0 12px rgba(15,168,70,0.55), 0 4px 8px rgba(0,0,0,0.4); }
+  50%       { box-shadow: 0 3px 0 #065c24, 0 0 20px rgba(15,168,70,0.8),  0 4px 8px rgba(0,0,0,0.4); }
+}
+
+/* Sold — grey, not available */
+.seat--sold {
+  background: #2e2b35;
+  color: #55505e;
+  cursor: not-allowed;
+  box-shadow: 0 3px 0 #1a181f, 0 2px 4px rgba(0,0,0,0.3);
+}
+.seat--sold::before { background: rgba(255,255,255,0.04); }
+
+/* Legend preview swatches (mini) */
+.ts-legend__swatch {
+  width: 24px;
+  height: 22px;
+  border-radius: 4px 4px 3px 3px;
+  pointer-events: none;
+  font-size: 7px;
+  box-shadow: 0 2px 0 rgba(0,0,0,0.5);
+}
+
+.ts-legend__swatch .seat__num { font-size: 7px; }
+
+/* ─── Legend panel ──────────────────────────────────────────── */
+.ts-legend {
+  width: 190px;
+  flex-shrink: 0;
+  background: #0f0d14;
+  border-left: 1px solid var(--velvet);
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.ts-legend__block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ts-legend__title {
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--cream);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.ts-legend__items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ts-legend__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ts-legend__label {
+  font-size: 12.5px;
+  color: var(--cream-dim);
+}
+
+/* Occupancy stats */
+.ts-legend__stats {
+  display: flex;
+  gap: 14px;
+}
+
+.ts-legend__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ts-legend__stat-val {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ts-legend__stat-key {
+  font-size: 10.5px;
+  color: var(--mute);
+}
+
+/* Hover tooltip inside legend */
+.ts-legend__hover {
+  background: var(--ink-raised-2);
+  border: 1px solid var(--velvet);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 62px;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.ts-legend__hover--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.ts-legend__hover-id {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cream);
+  letter-spacing: 0.04em;
+}
+
+.ts-legend__hover-name {
+  font-size: 12px;
+  color: var(--cream-dim);
+}
+
+.ts-legend__hover-status {
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+.ts-legend__hint {
+  font-size: 10px;
+  color: var(--mute);
+  letter-spacing: 0.04em;
+  text-align: center;
+  margin-top: auto;
+  padding: 8px 0 2px;
+  border-top: 1px solid var(--velvet);
+}
+
+/* ─── Scrollbar inside floor ────────────────────────────────── */
+.ts-floor::-webkit-scrollbar         { height: 4px; }
+.ts-floor::-webkit-scrollbar-track   { background: transparent; }
+.ts-floor::-webkit-scrollbar-thumb   { background: var(--velvet); border-radius: 2px; }
