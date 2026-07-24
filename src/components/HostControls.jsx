@@ -16,7 +16,7 @@ export default function HostControls({ room }) {
 
       <div className="host-controls__tabs">
         {[
-          { key: 'queue', label: 'Up Next' },
+          // { key: 'queue', label: 'Up Next' },
           { key: 'viewers', label: 'Viewers' },
           { key: 'settings', label: 'Settings' },
         ].map((t) => (
