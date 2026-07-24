@@ -1,21 +1,21 @@
 // Mock data layer for Live-Verse frontend.
 // Swap for real API calls once backend is ready — keep the same shapes.
 
-export const CONTENT_TYPES   = { MOVIE: 'movie', SERIES: 'series', LIVE_EVENT: 'live_event' };
+export const CONTENT_TYPES   = { MOVIE: 'movie', SERIES: 'series', SPORTS: 'sports' };
 export const ROOM_VISIBILITY = { PUBLIC: 'public', PRIVATE: 'private' };
-export const ROOM_STATUS     = { LIVE: 'live', SCHEDULED: 'scheduled', ENDED: 'ended' };
+export const ROOM_STATUS     = { LIVE: 'live', ENDED: 'ended' };
 
 export const currentUser = {
-  id: 'u-001', name: 'Aarav Sharma', handle: '@aarav',
+  id: 'u-001', name: 'Harsh Anand', handle: '@harsh',
   avatarColor: '#FF5A3C', isHost: true,
 };
 
 export const mockUsers = [
-  { id: 'u-001', name: 'Aarav Sharma',  handle: '@aarav',   avatarColor: '#FF5A3C' },
-  { id: 'u-002', name: 'Priya Nair',    handle: '@priyan',  avatarColor: '#7C6BFF' },
-  { id: 'u-003', name: 'Rohan Mehta',   handle: '@rohanm',  avatarColor: '#4ADE80' },
-  { id: 'u-004', name: 'Sneha Iyer',    handle: '@sneha_i', avatarColor: '#FFD166' },
-  { id: 'u-005', name: 'Kabir Singh',   handle: '@kabirs',  avatarColor: '#06D6A0' },
+  { id: 'u-001', name: 'Harsh Anand',  handle: '@harsh',   avatarColor: '#FF5A3C' },
+  { id: 'u-002', name: 'Kanishk Panwar',    handle: '@kanishk',  avatarColor: '#7C6BFF' },
+  { id: 'u-003', name: 'Manas Bagalia',   handle: '@manas',  avatarColor: '#4ADE80' },
+  { id: 'u-004', name: 'Anushka Roy',    handle: '@anushka_r', avatarColor: '#FFD166' },
+  { id: 'u-005', name: 'Ankita Singh',   handle: '@ankitas',  avatarColor: '#06D6A0' },
   { id: 'u-006', name: 'Meera Joshi',   handle: '@meeraj',  avatarColor: '#EF476F' },
 ];
 
