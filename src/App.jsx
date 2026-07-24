@@ -9,7 +9,6 @@ import RoomList from './pages/RoomList';
 import CreateRoom from './pages/CreateRoom';
 import HostReady from './pages/HostReady';
 import WatchRoom from './pages/WatchRoom';
-import { lazy } from 'react';
 import {login, getCurrentUser, createLive} from "./api/";
 
 export default function App() {
