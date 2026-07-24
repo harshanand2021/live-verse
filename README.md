@@ -69,7 +69,7 @@ npm install
 npm run dev
 ```
 
-Then open the local URL Vite prints (typically `http://localhost:5173`).
+Then open the local URL Vite prints (localhost: `http://localhost:5173`).
 
 Other scripts:
 
@@ -118,10 +118,11 @@ The shapes in `mockData.js` (room, user, message objects) are intentionally clos
 
 ---
 
-## 📋 Suggested next steps
+## 📋 Our next steps
 
-1. Stand up a backend (Node/Express + Socket.IO is a natural fit for room-based real-time chat + sync) and define the `Room`, `User`, and `Message` schemas to match `mockData.js`.
-2. Replace `AuthContext` with real JWT/session-based auth.
-3. Wire `ScreenPlayer` to an actual video source — for true synchronized playback across viewers, look at HLS for streaming + a WebSocket-driven "play/pause/seek" event broadcast from host to viewers.
-4. Add room persistence so `CreateRoom` → `HostReady` → `WatchRoom` uses one real room id throughout, instead of a hardcoded mock id.
-5. Add presence (who's currently in the room) and proper viewer-count updates over the socket connection.
+1. Build the backend with Java using Spring Boot or Quarkus, and integrate real-time room features such as chat and playback sync through WebSockets or SSE.
+2. Define the `Room`, `User`, and `Message` schemas to match `mockData.js` and expose REST endpoints for room creation, joining, and state updates.
+3. Replace `AuthContext` with real JWT/session-based auth.
+4. Wire `ScreenPlayer` to an actual video source — for true synchronized playback across viewers, look at HLS for streaming + a WebSocket-driven "play/pause/seek" event broadcast from host to viewers.
+5. Add room persistence so `CreateRoom` → `HostReady` → `WatchRoom` uses one real room id throughout, instead of a hardcoded mock id.
+6. Add presence (who's currently in the room) and proper viewer-count updates over the socket connection.
