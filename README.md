@@ -4,7 +4,7 @@ A virtual theatre for watching together. Live-Verse lets a host stream a movie, 
 
 Built as the course project for **C-DAC PGCP-AC**.
 
-> **Status:** Frontend-only build with mock data. No backend, auth, or real video/WebSocket connection is wired up yet — see [What's mocked vs. real](#whats-mocked-vs-real) below.
+> **Status:** Frontend-only build with mock data. No backend, auth, or real video/WebSocket connection is wired up yet — see [What's mocked vs. real] (#whats-mocked-vs-real) below.
 
 ---
 
@@ -23,7 +23,8 @@ Built as the course project for **C-DAC PGCP-AC**.
 The visual language leans into the *physical theatre* rather than a generic "streaming app" look:
 
 | Element | Why |
-|---|---|
+| --- | --- |
+
 | **Ticket-stub room cards** with a perforated tear line | Rooms are framed as admission tickets, not generic cards |
 | **Marquee bulb** logo mark + pulsing "LIVE" dot | Echoes cinema marquee lighting |
 | Near-black "theatre dark" background (`#0E0B12`) with a warm marquee-orange accent (`#FF5A3C`) and a violet accent (`#7C6BFF`) for host/private elements | Distinguishes host-only and private-room UI from regular public/viewer UI at a glance |
@@ -96,7 +97,7 @@ npm run lint      # oxlint
 This phase is **frontend-only**, built so the backend can be dropped in later without restructuring the UI.
 
 | Area | Current state | Swap-in point |
-|---|---|---|
+| --- | --- | --- |
 | Auth | In-memory mock; any credentials "work" | `src/context/AuthContext.jsx` — replace `login`/`signup` with real API calls, persist a token |
 | Rooms list | Static array in `mockData.js` | Replace with a `GET /rooms` fetch (consider React Query or plain `useEffect`) |
 | Create room | Generates a fake code, no persistence | `POST /rooms` — return the real room id/code and route to it |
