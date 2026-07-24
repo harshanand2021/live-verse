@@ -9,8 +9,16 @@ import RoomList from './pages/RoomList';
 import CreateRoom from './pages/CreateRoom';
 import HostReady from './pages/HostReady';
 import WatchRoom from './pages/WatchRoom';
+import { lazy } from 'react';
+import {login, getCurrentUser, createLive} from "./api/";
 
 export default function App() {
+
+  const RoomList = lazy(() => import("./pages/RoomList"))
+  const HostReady = lazy(() => import("./pages/HostReady"))
+  const WatchRoom = lazy(() => import("./pages/WatchRoom"))
+
+
   return (
     <AuthProvider>
       <BrowserRouter>
@@ -26,9 +34,12 @@ export default function App() {
             }
           >
             <Route path="/rooms" element={<RoomList />} />
+            {/* <Route path='rooms' element={RoomList} /> */}
             <Route path="/host/new" element={<CreateRoom />} />
-            <Route path="/host/:roomId" element={<HostReady />} />
+            {/* <Route path="/host/:roomId" element={<HostReady />} /> */}
+            <Route path='/host/:roomId' element={HostReady} />
             <Route path="/room/:roomId" element={<WatchRoom />} />
+            {/* <Route path='/room/:roomId' element={WatchRoom} /> */}
           </Route>
 
           <Route path="/" element={<Navigate to="/rooms" replace />} />

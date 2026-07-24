@@ -1,16 +1,25 @@
-import { useState, useRef, useEffect } from 'react';
-import { mockUsers, mockReactions } from '../data/mockData';
-import './styles/ChatPanel.css';
+import { useState, useRef, useEffect } from "react";
+import { mockUsers, mockReactions } from "../data/mockData";
+import "./styles/ChatPanel.css";
 
 function findUser(userId) {
-  return mockUsers.find(u => u.id === userId)
-    || { name: 'Viewer', avatarColor: '#8A8294' };
+  return (
+    mockUsers.find((u) => u.id === userId) || {
+      name: "Viewer",
+      avatarColor: "#8A8294",
+    }
+  );
 }
 
-export default function ChatPanel({ messages, onSend, viewerCount, isFullScreen }) {
-  const [draft, setDraft]       = useState('');
-  const [tab, setTab]           = useState('chat');  // 'chat' | 'viewers'
-  const listRef                 = useRef(null);
+export default function ChatPanel({
+  messages,
+  onSend,
+  viewerCount,
+  isFullScreen,
+}) {
+  const [draft, setDraft] = useState("");
+  const [tab, setTab] = useState("chat"); // 'chat' | 'viewers'
+  const listRef = useRef(null);
 
   // Auto-scroll to newest message
   useEffect(() => {
@@ -19,28 +28,29 @@ export default function ChatPanel({ messages, onSend, viewerCount, isFullScreen 
     }
   }, [messages]);
 
-  const handleSubmit = e => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!draft.trim()) return;
     onSend(draft.trim());
-    setDraft('');
+    setDraft("");
   };
 
   return (
-    <aside className={`chat-panel ${isFullScreen ? 'chat-panel--fullscreen-float' : ''}`}>
-
+    <aside
+      className={`chat-panel ${isFullScreen ? "chat-panel--fullscreen-float" : ""}`}
+    >
       {/* ── Header ── */}
       <div className="chat-panel__header">
         <div className="chat-panel__tabs">
           <button
-            className={`chat-panel__tab ${tab === 'chat' ? 'chat-panel__tab--active' : ''}`}
-            onClick={() => setTab('chat')}
+            className={`chat-panel__tab ${tab === "chat" ? "chat-panel__tab--active" : ""}`}
+            onClick={() => setTab("chat")}
           >
             Chat
           </button>
           <button
-            className={`chat-panel__tab ${tab === 'viewers' ? 'chat-panel__tab--active' : ''}`}
-            onClick={() => setTab('viewers')}
+            className={`chat-panel__tab ${tab === "viewers" ? "chat-panel__tab--active" : ""}`}
+            onClick={() => setTab("viewers")}
           >
             Viewers
           </button>
@@ -52,10 +62,15 @@ export default function ChatPanel({ messages, onSend, viewerCount, isFullScreen 
       </div>
 
       {/* ── Chat tab ── */}
-      {tab === 'chat' && (
+      {tab === "chat" && (
         <>
-          <div className="chat-panel__messages" ref={listRef} aria-live="polite" aria-label="Chat messages">
-            {messages.map(msg => {
+          <div
+            className="chat-panel__messages"
+            ref={listRef}
+            aria-live="polite"
+            aria-label="Chat messages"
+          >
+            {messages.map((msg) => {
               const author = findUser(msg.userId);
               return (
                 <div key={msg.id} className="chat-msg">
@@ -80,7 +95,7 @@ export default function ChatPanel({ messages, onSend, viewerCount, isFullScreen 
 
           {/* Quick reactions */}
           <div className="chat-panel__reactions" aria-label="Quick reactions">
-            {mockReactions.map(r => (
+            {mockReactions.map((r) => (
               <button
                 key={r}
                 type="button"
@@ -100,7 +115,7 @@ export default function ChatPanel({ messages, onSend, viewerCount, isFullScreen 
               className="chat-panel__input"
               placeholder="Say something…"
               value={draft}
-              onChange={e => setDraft(e.target.value)}
+              onChange={(e) => setDraft(e.target.value)}
               aria-label="Chat message"
               maxLength={280}
             />
@@ -110,8 +125,13 @@ export default function ChatPanel({ messages, onSend, viewerCount, isFullScreen 
               disabled={!draft.trim()}
               aria-label="Send message"
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
               </svg>
             </button>
           </form>
@@ -119,11 +139,14 @@ export default function ChatPanel({ messages, onSend, viewerCount, isFullScreen 
       )}
 
       {/* ── Viewers tab ── */}
-      {tab === 'viewers' && (
+      {tab === "viewers" && (
         <div className="chat-panel__viewers">
-          {mockUsers.map(u => (
+          {mockUsers.map((u) => (
             <div key={u.id} className="viewer-row">
-              <span className="viewer-row__avatar" style={{ background: u.avatarColor }}>
+              <span
+                className="viewer-row__avatar"
+                style={{ background: u.avatarColor }}
+              >
                 {u.name.charAt(0)}
               </span>
               <div className="viewer-row__info">
