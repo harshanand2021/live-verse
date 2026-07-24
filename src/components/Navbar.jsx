@@ -21,7 +21,7 @@ export default function Navbar() {
         </Link>
 
         <nav className="navbar__links">
-          <Link to="/rooms" className="navbar__link">Marquee Board</Link>
+          <Link to="/rooms" className="navbar__link">All Rooms</Link>
           <Link to="/host/new" className="navbar__link">Host a Room</Link>
         </nav>
 

@@ -6,7 +6,7 @@ import './styles/HostReady.css';
 const CONTENT_LABEL = {
   [CONTENT_TYPES.MOVIE]: 'Movie',
   [CONTENT_TYPES.SERIES]: 'Web Series',
-  [CONTENT_TYPES.LIVE_EVENT]: 'Live Event',
+  [CONTENT_TYPES.SPORTS]: 'Sports',
 };
 
 export default function HostReady() {

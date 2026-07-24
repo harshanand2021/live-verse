@@ -82,7 +82,7 @@ export default function CreateRoom() {
               {Object.entries({
                 [CONTENT_TYPES.MOVIE]: 'Movie',
                 [CONTENT_TYPES.SERIES]: 'Web Series',
-                [CONTENT_TYPES.LIVE_EVENT]: 'Live Event',
+                [CONTENT_TYPES.SPORTS]: 'Sports',
               }).map(([value, label]) => (
                 <button
                   type="button"
@@ -126,7 +126,7 @@ export default function CreateRoom() {
           ) : null}
 
           <div className="cr-field">
-            <span>When does it start?</span>
+            {/* <span>When does it start?</span> */}
             <div className="cr-pill-group">
               <button
                 type="button"
@@ -135,13 +135,13 @@ export default function CreateRoom() {
               >
                 Start right now
               </button>
-              <button
+              {/* <button
                 type="button"
                 className={`cr-pill ${!scheduleNow ? 'cr-pill--active' : ''}`}
                 onClick={() => setScheduleNow(false)}
               >
                 Schedule for later
-              </button>
+              </button> */}
             </div>
           </div>
 

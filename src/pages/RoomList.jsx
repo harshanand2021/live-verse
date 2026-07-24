@@ -9,7 +9,7 @@ const FILTERS = [
   { key: 'all', label: 'All Rooms' },
   { key: 'public', label: 'Public' },
   { key: 'private', label: 'Private' },
-  { key: 'live', label: 'Live Now' },
+  // { key: 'live', label: 'Live Now' },
 ];
 
 export default function RoomList() {
@@ -21,7 +21,7 @@ export default function RoomList() {
     return mockRooms.filter((room) => {
       if (filter === 'public' && room.visibility !== 'public') return false;
       if (filter === 'private' && room.visibility !== 'private') return false;
-      if (filter === 'live' && room.status !== 'live') return false;
+      if (filter === 'live' && room.status !== 'live') return true;
       if (query && !room.title.toLowerCase().includes(query.toLowerCase())) return false;
       return true;
     });

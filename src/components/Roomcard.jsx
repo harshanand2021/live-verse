@@ -5,7 +5,7 @@ import './styles/Roomcard.css';
 const CONTENT_LABEL = {
   [CONTENT_TYPES.MOVIE]: 'Film',
   [CONTENT_TYPES.SERIES]: 'Series',
-  [CONTENT_TYPES.LIVE_EVENT]: 'Live Event',
+  [CONTENT_TYPES.SPORTS]: 'SPORTS',
 };
 
 export default function RoomCard({ room }) {
