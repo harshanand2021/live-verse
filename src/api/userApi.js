@@ -12,7 +12,4 @@ export const followUser = (id) => api.post(`/api/users/${id}/follow`);
 
 export const unfollowUser = (id) => api.delete(`/api/users/${id}/follow`);
 
-export const searchUsers = (keyword)
-    => api.get("/api/users/search", {
-        params: { q: keyword },
-    });
+export const searchUsers = (keyword) => api.get("/api/users/search", {params: { q: keyword }});
