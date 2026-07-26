@@ -48,9 +48,9 @@ export default function RoomCard({ room }) {
         </span>
         {isLive ? (
           <span className="ticket__viewers mono">{room.viewerCount.toLocaleString()} watching</span>
-        ) : (
+        ) /* : (
           <span className="ticket__viewers mono">{room.code ? 'Invite only' : 'Open soon'}</span>
-        )}
+        )*/ : null}
         <span className="ticket__admit mono">ADMIT ONE →</span>
       </div>
     </Link>
