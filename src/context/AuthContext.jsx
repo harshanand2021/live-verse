@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback } from 'react';
 import { currentUser as mockCurrentUser, fakeDelay } from '../data/mockData';
+// import apiClient from "../api/apiClient";
 
 const AuthContext = createContext(null);
 

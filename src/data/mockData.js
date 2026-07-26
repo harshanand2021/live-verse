@@ -50,7 +50,7 @@ export const SEAT_SECTIONS = [
     tierSub: 'Host & Featured Seats',
     rows: [
       mkRow('A', [
-        [10,S],[9,S],[8,H,'Aarav (Host)'],[7,OC,'Priya'],[6,Y,'You'],[5,OC,'Rohan'],
+        [10,S],[9,S],[8,H,'Harsh (Host)'],[7,OC,'Manas'],[6,Y,'You'],[5,OC,'Kanishk'],
         [4,OC,'Sneha'],[3,OC,'Kabir'],[2,OC,'Meera'],[1,A],
       ]),
     ],
