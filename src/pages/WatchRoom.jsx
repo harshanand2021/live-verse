@@ -17,9 +17,19 @@ export default function WatchRoom() {
   );
 
   const isHost      = room.hostId === currentUser.id;
-  const [isPlaying,    setIsPlaying]    = useState(true);
-  const [isFullScreen, setIsFullScreen] = useState(false);
-  const [messages,     setMessages]     = useState(mockChatMessages);
+  const [isPlaying,     setIsPlaying]     = useState(true);
+  const [isFullScreen,  setIsFullScreen]  = useState(false);
+  const [messages,      setMessages]      = useState(mockChatMessages);
+
+  // Hosts step straight onto their reserved seat; everyone else has to pick
+  // one before the screen is revealed — no seat, no show.
+  const [selectedSeatId, setSelectedSeatId] = useState(null);
+  const [hasEntered,     setHasEntered]     = useState(isHost);
+
+  const handleEnterTheatre = () => {
+    if (!selectedSeatId) return;
+    setHasEntered(true);
+  };
 
   const handleSend = text => {
     setMessages(prev => [
@@ -60,37 +70,71 @@ export default function WatchRoom() {
         </div>
       )}
 
-      {/* ── Main layout: [screen + seats] | [chat] ── */}
-      <div className={`watch-room__body ${isFullScreen ? '' : 'container'}`}>
+      {!hasEntered ? (
+        /* ── Seat picker: the screen stays hidden until a seat is chosen ── */
+        <div className="watch-room__picker container">
+          <div className="watch-room__picker-intro">
+            <h3>Choose your seat</h3>
+            <p>Grab any green seat to claim it — the screen unlocks once you're seated.</p>
+          </div>
 
-        {/* Left column: screen on top, seats below */}
-        <div className="watch-room__left">
-          <ScreenPlayer
-            room={room}
-            isHost={isHost}
-            isPlaying={isPlaying}
-            isFullScreen={isFullScreen}
-            onTogglePlay={() => setIsPlaying(p => !p)}
-            onToggleFullScreen={() => setIsFullScreen(p => !p)}
+          <TheatreSeats
+            selectedSeatId={selectedSeatId}
+            onSelectSeat={setSelectedSeatId}
+            locked={false}
           />
 
-          {/* 50-seat virtual theatre — hidden when fullscreen */}
-          <TheatreSeats isFullScreen={isFullScreen} />
-
-          {/* Host controls panel — below seats, host only, hidden when fullscreen */}
-          {isHost && !isFullScreen && (
-            <HostControls room={room} />
-          )}
+          <div className="watch-room__picker-bar">
+            <span className="watch-room__picker-status mono">
+              {selectedSeatId ? `Seat ${selectedSeatId} selected` : 'No seat selected yet'}
+            </span>
+            <button
+              type="button"
+              className="watch-room__picker-cta"
+              disabled={!selectedSeatId}
+              onClick={handleEnterTheatre}
+            >
+              Take Your Seat & Watch
+            </button>
+          </div>
         </div>
+      ) : (
+        /* ── Main layout: [screen + seats] | [chat] ── */
+        <div className={`watch-room__body ${isFullScreen ? '' : 'container'}`}>
 
-        {/* Right column: chat — always visible, floats in fullscreen */}
-        <ChatPanel
-          messages={messages}
-          onSend={handleSend}
-          viewerCount={room.viewerCount || 1}
-          isFullScreen={isFullScreen}
-        />
-      </div>
+          {/* Left column: screen on top, seats below */}
+          <div className="watch-room__left">
+            <ScreenPlayer
+              room={room}
+              isHost={isHost}
+              isPlaying={isPlaying}
+              isFullScreen={isFullScreen}
+              onTogglePlay={() => setIsPlaying(p => !p)}
+              onToggleFullScreen={() => setIsFullScreen(p => p)}
+            />
+
+            {/* 50-seat virtual theatre — hidden when fullscreen */}
+            {/* <TheatreSeats
+              isFullScreen={isFullScreen}
+              selectedSeatId={selectedSeatId}
+              locked
+            /> */}
+
+            {/* Host controls panel — below seats, host only, hidden when fullscreen */}
+            {isHost && !isFullScreen && (
+              <HostControls room={room} />
+            )}
+          </div>
+
+          {/* Right column: chat — always visible, floats in fullscreen */}
+          <ChatPanel
+            messages={messages}
+            onSend={handleSend}
+            viewerCount={room.viewerCount || 1}
+            isFullScreen={isFullScreen}
+          />
+        </div>
+      )}
     </div>
   );
 }
