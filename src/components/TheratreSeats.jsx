@@ -12,21 +12,22 @@ const STATUS = {
 };
 
 // ─── Single seat button ───────────────────────────────────────────────────────
-function Seat({ seat, rowLabel, onHover, isHovered }) {
-  const cfg        = STATUS[seat.status] || STATUS.available;
-  const isClickable = seat.status === 'available';
-  const seatId     = `${rowLabel}${seat.num}`;
+function Seat({ seat, displayStatus, rowLabel, isClickable, onClick, onHover, isHovered }) {
+  const cfg    = STATUS[displayStatus] || STATUS.available;
+  const seatId = `${rowLabel}${seat.num}`;
 
   return (
     <button
       type="button"
       className={`seat ${cfg.cls} ${isHovered ? 'seat--hovered' : ''}`}
       disabled={!isClickable}
+      aria-pressed={displayStatus === 'you'}
       aria-label={`Seat ${seatId}, ${seat.name ? seat.name + ', ' : ''}${cfg.label}`}
       title={seat.name ? `${seatId} — ${seat.name}` : seatId}
-      onMouseEnter={() => onHover({ seatId, seat, rowLabel })}
+      onClick={() => isClickable && onClick(seatId)}
+      onMouseEnter={() => onHover({ seatId, seat: { ...seat, status: displayStatus }, rowLabel })}
       onMouseLeave={() => onHover(null)}
-      onFocus={() => onHover({ seatId, seat, rowLabel })}
+      onFocus={() => onHover({ seatId, seat: { ...seat, status: displayStatus }, rowLabel })}
       onBlur={() => onHover(null)}
     >
       <span className="seat__num">{seat.num}</span>
@@ -35,7 +36,7 @@ function Seat({ seat, rowLabel, onHover, isHovered }) {
 }
 
 // ─── One section block (e.g. PREMIUM ROW / PREMIER / CLASSIC) ────────────────
-function Section({ section, onHover, hoveredId }) {
+function Section({ section, selectedSeatId, locked, onSelectSeat, onHover, hoveredId }) {
   return (
     <div className="ts-section">
       {/* Section tier header */}
@@ -50,8 +51,33 @@ function Section({ section, onHover, hoveredId }) {
 
       {/* Rows */}
       <div className="ts-rows">
-        {section.rows.map(row => (
-          <div key={row.rowLabel} className="ts-row">
+        {section.rows.map((row, rowIndex) => {
+          const middle = Math.ceil(row.seats.length / 2);
+          const leftBank = row.seats.slice(0, middle);
+          const rightBank = row.seats.slice(middle);
+
+          const renderSeat = seat => {
+            const seatId = `${row.rowLabel}${seat.num}`;
+            const isSelected = seatId === selectedSeatId;
+            const displayStatus = isSelected ? 'you' : seat.status;
+            const isClickable = !locked && (seat.status === 'available' || isSelected);
+
+            return (
+              <Seat
+                key={seatId}
+                seat={seat}
+                displayStatus={displayStatus}
+                rowLabel={row.rowLabel}
+                isClickable={isClickable}
+                onClick={id => onSelectSeat(isSelected ? null : id)}
+                onHover={onHover}
+                isHovered={hoveredId === seatId}
+              />
+            );
+          };
+
+          return (
+          <div key={row.rowLabel} className={`ts-row ts-row--${rowIndex + 1}`}>
             {/* Row letter label */}
             <span className="ts-row__label mono" aria-label={`Row ${row.rowLabel}`}>
               {row.rowLabel}
@@ -59,18 +85,9 @@ function Section({ section, onHover, hoveredId }) {
 
             {/* Seats */}
             <div className="ts-row__seats">
-              {row.seats.map(seat => {
-                const seatId = `${row.rowLabel}${seat.num}`;
-                return (
-                  <Seat
-                    key={seatId}
-                    seat={seat}
-                    rowLabel={row.rowLabel}
-                    onHover={onHover}
-                    isHovered={hoveredId === seatId}
-                  />
-                );
-              })}
+              <div className="ts-row__bank ts-row__bank--left">{leftBank.map(renderSeat)}</div>
+              <span className="ts-row__aisle" aria-label="Centre aisle" />
+              <div className="ts-row__bank ts-row__bank--right">{rightBank.map(renderSeat)}</div>
             </div>
 
             {/* Mirror label on right side */}
@@ -78,14 +95,15 @@ function Section({ section, onHover, hoveredId }) {
               {row.rowLabel}
             </span>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
 }
 
 // ─── Legend panel ─────────────────────────────────────────────────────────────
-function Legend({ hovered }) {
+function Legend({ hovered, selectedSeatId, locked }) {
   const items = [
     { cls: 'seat--host',      label: 'Host'      },
     { cls: 'seat--you',       label: 'You'       },
@@ -95,8 +113,10 @@ function Legend({ hovered }) {
   ];
 
   const totalSeats    = SEAT_SECTIONS.flatMap(s => s.rows.flatMap(r => r.seats));
-  const occupiedCount = totalSeats.filter(s => ['occupied','host','you'].includes(s.status)).length;
-  const availCount    = totalSeats.filter(s => s.status === 'available').length;
+  const occupiedCount = totalSeats.filter(s => ['occupied', 'host'].includes(s.status)).length
+    + (selectedSeatId ? 1 : 0);
+  const availCount    = totalSeats.filter(s => s.status === 'available').length
+    - (selectedSeatId ? 1 : 0);
 
   return (
     <aside className="ts-legend">
@@ -143,13 +163,19 @@ function Legend({ hovered }) {
         ) : null}
       </div>
 
-      <p className="ts-legend__hint mono">Hover any seat to see details</p>
+      <p className="ts-legend__hint mono">
+        {locked
+          ? 'Hover any seat to see details'
+          : selectedSeatId
+            ? 'Tap your seat again to change it'
+            : 'Tap a green seat to sit there'}
+      </p>
     </aside>
   );
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function TheatreSeats({ isFullScreen }) {
+export default function TheatreSeats({ isFullScreen, selectedSeatId = null, onSelectSeat = () => {}, locked = false }) {
   const [hovered, setHovered] = useState(null);
 
   if (isFullScreen) return null;
@@ -163,7 +189,9 @@ export default function TheatreSeats({ isFullScreen }) {
         <div className="ts-screen-arch__curtain ts-screen-arch__curtain--right" />
         <div className="ts-screen-arch__frame">
           <div className="ts-screen-arch__glow" />
-          <span className="ts-screen-arch__label mono">— SCREEN THIS WAY —</span>
+          <span className="ts-screen-arch__label mono">
+            {locked ? '— SCREEN THIS WAY —' : '— PICK YOUR SEAT TO REVEAL THE SCREEN —'}
+          </span>
         </div>
       </div>
 
@@ -176,6 +204,9 @@ export default function TheatreSeats({ isFullScreen }) {
             <Section
               key={section.id}
               section={section}
+              selectedSeatId={selectedSeatId}
+              locked={locked}
+              onSelectSeat={onSelectSeat}
               onHover={setHovered}
               hoveredId={hovered?.seatId}
             />
@@ -183,7 +214,7 @@ export default function TheatreSeats({ isFullScreen }) {
         </div>
 
         {/* Right-side legend panel */}
-        <Legend hovered={hovered} />
+        <Legend hovered={hovered} selectedSeatId={selectedSeatId} locked={locked} />
       </div>
 
     </section>

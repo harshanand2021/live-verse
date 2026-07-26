@@ -9,79 +9,60 @@
   user-select: none;
 }
 
-/* ─── Screen arch ──────────────────────────────────────────── */
+/* ─── Screen bar (seen edge-on, from directly above) ─────────── */
 .ts-screen-arch {
   position: relative;
-  height: 100px;
-  overflow: hidden;
+  height: 46px;
+  overflow: visible;
   flex-shrink: 0;
-  background: linear-gradient(to bottom, #1a0808 0%, #0d0b10 100%);
-}
-
-/* Velvet curtains on each side */
-.ts-screen-arch__curtain {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 60px;
-  z-index: 2;
-}
-
-.ts-screen-arch__curtain--left {
-  left: 0;
-  background: linear-gradient(to right, #3d0a0a 0%, #1a0505 60%, transparent 100%);
-  border-right: 3px solid rgba(255, 60, 60, 0.35);
-  box-shadow: inset -10px 0 20px rgba(180, 0, 0, 0.15);
-}
-
-.ts-screen-arch__curtain--right {
-  right: 0;
-  background: linear-gradient(to left, #3d0a0a 0%, #1a0505 60%, transparent 100%);
-  border-left: 3px solid rgba(255, 60, 60, 0.35);
-  box-shadow: inset 10px 0 20px rgba(180, 0, 0, 0.15);
-}
-
-/* The actual screen frame — curved bottom */
-.ts-screen-arch__frame {
-  position: absolute;
-  left: 60px;
-  right: 60px;
-  top: 0;
-  bottom: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  /* Curved bottom border = cinema screen curve */
-  border-bottom: 3px solid rgba(200, 160, 100, 0.55);
-  border-left:   2px solid rgba(200, 160, 100, 0.25);
-  border-right:  2px solid rgba(200, 160, 100, 0.25);
-  border-radius: 0 0 80% 80% / 0 0 40px 40px;
-  background: linear-gradient(
-    to bottom,
-    rgba(255, 200, 120, 0.07) 0%,
-    rgba(255, 200, 120, 0.02) 50%,
-    transparent 100%
-  );
+  padding-bottom: 10px;
+  background: radial-gradient(ellipse 70% 100% at 50% 0%, rgba(255, 180, 60, 0.06), transparent 75%),
+              linear-gradient(to bottom, #100d14 0%, #0d0b10 100%);
+}
+
+/* Curtains collapse to thin side markers in top-down view */
+.ts-screen-arch__curtain {
+  display: none;
+}
+
+/* The screen itself: a slim glowing bar, exactly what you'd see looking straight down at it */
+.ts-screen-arch__frame {
+  position: relative;
+  width: 74%;
+  max-width: 620px;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, transparent, rgba(255, 210, 130, 0.9) 12%, rgba(255, 225, 170, 1) 50%, rgba(255, 210, 130, 0.9) 88%, transparent);
   box-shadow:
-    inset 0 -6px 24px rgba(255, 200, 100, 0.12),
-    0 4px 20px rgba(255, 180, 60, 0.18);
+    0 0 10px 1px rgba(255, 200, 100, 0.55),
+    0 10px 26px 4px rgba(255, 170, 60, 0.16);
 }
 
 .ts-screen-arch__glow {
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(ellipse 80% 40% at 50% 0%, rgba(255,220,140,0.12), transparent 70%);
+  left: 50%;
+  bottom: -2px;
+  transform: translateX(-50%);
+  width: 100%;
+  height: 60px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse 50% 100% at 50% 0%, rgba(255,220,140,0.14), transparent 72%);
+  pointer-events: none;
 }
 
 .ts-screen-arch__label {
-  position: relative;
-  z-index: 1;
-  font-size: 10px;
-  letter-spacing: 0.18em;
-  color: rgba(200, 160, 100, 0.7);
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  color: rgba(200, 160, 100, 0.6);
   text-transform: uppercase;
-  padding-bottom: 18px;
+  white-space: nowrap;
 }
 
 /* ─── Main layout: floor + legend ──────────────────────────── */
@@ -92,18 +73,20 @@
   min-height: 0;
 }
 
-/* ─── Floor (perspective container for seats) ──────────────── */
+/* ─── Floor — flat, top-down plan view of the room ───────────── */
 .ts-floor {
   flex: 1;
-  padding: 14px 16px 20px;
+  padding: 20px 20px 24px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
   overflow-x: auto;
-  /* Subtle perspective tilt — the seats "recede" toward the screen */
   background:
-    radial-gradient(ellipse 90% 50% at 50% 0%, rgba(255,180,60,0.04), transparent 60%),
-    linear-gradient(to bottom, #111018 0%, #0d0b10 100%);
+    /* centre aisle, seen from directly above */
+    linear-gradient(90deg, transparent 49.4%, rgba(240, 208, 142, 0.07) 49.4%, rgba(240, 208, 142, 0.07) 50.6%, transparent 50.6%),
+    /* faint even floor tint spilling from the screen — no vanishing point */
+    radial-gradient(ellipse 90% 30% at 50% 0%, rgba(255, 180, 60, 0.05), transparent 70%),
+    #100d14;
 }
 
 /* ─── Section block ─────────────────────────────────────────── */
@@ -150,14 +133,28 @@
 .ts-rows {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 8px;
 }
 
 .ts-row {
   display: flex;
   align-items: center;
   gap: 8px;
+  width: var(--row-width, 100%);
+  margin: 0 auto;
 }
+
+/* A theatre opens out toward the rear: the rows are intentionally wider. */
+.ts-section:nth-child(1) { --row-width: 72%; }
+.ts-section:nth-child(2) .ts-row--1 { --row-width: 80%; }
+.ts-section:nth-child(2) .ts-row--2 { --row-width: 86%; }
+.ts-section:nth-child(2) .ts-row--3 { --row-width: 92%; }
+.ts-section:nth-child(2) .ts-row--4 { --row-width: 96%; }
+.ts-section:nth-child(3) .ts-row--1 { --row-width: 82%; }
+.ts-section:nth-child(3) .ts-row--2 { --row-width: 87%; }
+.ts-section:nth-child(3) .ts-row--3 { --row-width: 92%; }
+.ts-section:nth-child(3) .ts-row--4 { --row-width: 96%; }
+.ts-section:nth-child(3) .ts-row--5 { --row-width: 100%; }
 
 .ts-row__label {
   width: 18px;
@@ -175,42 +172,58 @@
 }
 
 .ts-row__seats {
-  display: flex;
-  gap: 5px;
-  flex-wrap: nowrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1fr);
+  align-items: center;
+  flex: 1;
+  min-width: 0;
 }
 
-/* ─── Individual seat ───────────────────────────────────────── */
+.ts-row__bank {
+  display: flex;
+  gap: clamp(3px, 0.55vw, 6px);
+}
+
+.ts-row__bank--left { justify-content: flex-end; }
+.ts-row__bank--right { justify-content: flex-start; }
+
+.ts-row__aisle {
+  align-self: stretch;
+  margin: -3px 2px;
+  border-left: 1px dashed rgba(230, 199, 130, 0.25);
+}
+
+/* ─── Individual seat — a chair seen straight from above ─────── */
 .seat {
-  width: 32px;
-  height: 30px;
-  border-radius: 5px 5px 4px 4px;
+  width: clamp(20px, 2.8vw, 28px);
+  height: clamp(20px, 2.8vw, 28px);
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   position: relative;
   cursor: default;
-  font-size: 9px;
+  font-size: 8.5px;
   font-weight: 700;
   font-family: var(--font-mono);
   letter-spacing: 0.01em;
-  transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.1s ease;
-  /* Bottom "seat leg" shadow for 3-D depth */
-  box-shadow: 0 3px 0 rgba(0,0,0,0.55), 0 4px 6px rgba(0,0,0,0.4);
-  border: none;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+  border: 1px solid rgba(0,0,0,0.35);
 }
 
-/* Seat top-edge highlight — the backrest "lip" */
+/* Backrest — a short arc facing the screen, the one cue top-down plans keep */
 .seat::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 2px;
-  right: 2px;
-  height: 4px;
-  border-radius: 3px 3px 0 0;
-  background: rgba(255,255,255,0.18);
+  top: 2px;
+  left: 20%;
+  right: 20%;
+  height: 30%;
+  border-radius: 50% 50% 40% 40%;
+  background: rgba(255,255,255,0.16);
+  pointer-events: none;
 }
 
 /* The number label */
@@ -218,14 +231,13 @@
   position: relative;
   z-index: 1;
   line-height: 1;
-  padding-top: 2px; /* push below the backrest highlight */
 }
 
 /* Hover / focus on interactive seats */
 .seat--hovered,
 .seat--available:hover,
 .seat--available:focus-visible {
-  transform: translateY(-3px) scale(1.1);
+  transform: scale(1.22);
   z-index: 10;
   outline: none;
 }
@@ -237,46 +249,46 @@
   background: #1e7e34;
   color: #d4f5db;
   cursor: pointer;
-  box-shadow: 0 3px 0 #0f3d1a, 0 4px 8px rgba(30,126,52,0.3);
+  box-shadow: 0 2px 5px rgba(30,126,52,0.35);
 }
 .seat--available:hover,
 .seat--available:focus-visible {
   background: #25a244;
-  box-shadow: 0 3px 0 #0f3d1a, 0 6px 14px rgba(37,162,68,0.45);
+  box-shadow: 0 0 0 3px rgba(37,162,68,0.3), 0 4px 10px rgba(37,162,68,0.5);
 }
-.seat--available::before { background: rgba(255,255,255,0.25); }
+.seat--available::before { background: rgba(255,255,255,0.22); }
 
 /* Occupied — orange-amber, someone is watching */
 .seat--occupied {
   background: #b07d1a;
   color: #fff4d4;
   cursor: not-allowed;
-  box-shadow: 0 3px 0 #5c3e06, 0 4px 6px rgba(176,125,26,0.3);
+  box-shadow: 0 2px 5px rgba(176,125,26,0.3);
 }
-.seat--occupied::before { background: rgba(255,220,100,0.2); }
+.seat--occupied::before { background: rgba(255,220,100,0.18); }
 
 /* Host seat — marquee red-orange */
 .seat--host {
   background: #c2390f;
   color: #ffe8e0;
   cursor: not-allowed;
-  box-shadow: 0 3px 0 #6b1c04, 0 4px 8px rgba(255,90,60,0.4);
+  box-shadow: 0 2px 6px rgba(255,90,60,0.4);
 }
-.seat--host::before { background: rgba(255,150,100,0.25); }
+.seat--host::before { background: rgba(255,150,100,0.22); }
 
-/* Your seat — bright glowing green */
+/* Your seat — bright glowing green, seen as a halo from above */
 .seat--you {
   background: #0fa846;
   color: #fff;
   cursor: not-allowed;
-  box-shadow: 0 3px 0 #065c24, 0 0 12px rgba(15,168,70,0.55), 0 4px 8px rgba(0,0,0,0.4);
+  box-shadow: 0 0 0 3px rgba(15,168,70,0.25), 0 0 14px rgba(15,168,70,0.55);
   animation: you-pulse 2.4s ease-in-out infinite;
 }
-.seat--you::before { background: rgba(255,255,255,0.35); }
+.seat--you::before { background: rgba(255,255,255,0.32); }
 
 @keyframes you-pulse {
-  0%, 100% { box-shadow: 0 3px 0 #065c24, 0 0 12px rgba(15,168,70,0.55), 0 4px 8px rgba(0,0,0,0.4); }
-  50%       { box-shadow: 0 3px 0 #065c24, 0 0 20px rgba(15,168,70,0.8),  0 4px 8px rgba(0,0,0,0.4); }
+  0%, 100% { box-shadow: 0 0 0 3px rgba(15,168,70,0.25), 0 0 14px rgba(15,168,70,0.55); }
+  50%       { box-shadow: 0 0 0 5px rgba(15,168,70,0.32), 0 0 22px rgba(15,168,70,0.8); }
 }
 
 /* Sold — grey, not available */
@@ -284,18 +296,18 @@
   background: #2e2b35;
   color: #55505e;
   cursor: not-allowed;
-  box-shadow: 0 3px 0 #1a181f, 0 2px 4px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
-.seat--sold::before { background: rgba(255,255,255,0.04); }
+.seat--sold::before { background: rgba(255,255,255,0.03); }
 
 /* Legend preview swatches (mini) */
 .ts-legend__swatch {
-  width: 24px;
+  width: 22px;
   height: 22px;
-  border-radius: 4px 4px 3px 3px;
+  border-radius: 50%;
   pointer-events: none;
   font-size: 7px;
-  box-shadow: 0 2px 0 rgba(0,0,0,0.5);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
 .ts-legend__swatch .seat__num { font-size: 7px; }
@@ -419,3 +431,33 @@
 .ts-floor::-webkit-scrollbar         { height: 4px; }
 .ts-floor::-webkit-scrollbar-track   { background: transparent; }
 .ts-floor::-webkit-scrollbar-thumb   { background: var(--velvet); border-radius: 2px; }
+
+@media (max-width: 700px) {
+  .ts-main { flex-direction: column; }
+
+  .ts-legend {
+    width: auto;
+    border-top: 1px solid var(--velvet);
+    border-left: 0;
+    padding: 14px 16px;
+  }
+
+  .ts-legend__items { flex-flow: row wrap; }
+  .ts-legend__item { width: calc(50% - 8px); }
+  .ts-legend__hover { display: none; }
+  .ts-legend__hint { margin-top: 0; }
+}
+
+@media (max-width: 440px) {
+  .ts-screen-arch__curtain { width: 35px; }
+  .ts-screen-arch__frame { left: 35px; right: 35px; }
+  .ts-screen-arch__label { font-size: 8px; letter-spacing: 0.1em; }
+  .ts-floor { padding: 14px 8px 20px; }
+  .ts-row { gap: 3px; }
+  .ts-row__label { width: 13px; font-size: 9px; }
+  .ts-row__label--right { width: 4px; }
+  .ts-row__seats { grid-template-columns: minmax(0, 1fr) 11px minmax(0, 1fr); }
+  .ts-row__bank { gap: 2px; }
+  .seat { width: 18px; height: 18px; font-size: 7px; }
+  .seat::before { height: 30%; }
+}
