@@ -11,7 +11,7 @@
   position: relative;
   min-height: 430px;
   overflow: hidden;
-  padding: clamp(28px, 5vw, 56px) clamp(26px, 6vw, 82px) 78px;
+  padding: clamp(28px, 5vw, 56px) clamp(26px, 6vw, 82px) 48px;
   background:
     radial-gradient(ellipse 55% 42% at 50% 24%, rgba(255, 210, 133, 0.1), transparent 70%),
     linear-gradient(112deg, #18080d 0%, #0b090e 30%, #121017 50%, #0b090e 70%, #18080d 100%);
@@ -83,35 +83,6 @@
   box-shadow: inset 12px 0 20px rgba(0, 0, 0, 0.32);
 }
 
-.inside-view__audience {
-  position: absolute;
-  z-index: 4;
-  right: 0;
-  bottom: -15px;
-  left: 0;
-  height: 95px;
-  display: flex;
-  align-items: end;
-  justify-content: center;
-  gap: clamp(2px, 1.2vw, 18px);
-  padding: 0 8%;
-  pointer-events: none;
-  background: linear-gradient(to top, rgba(3, 3, 6, 0.96) 0%, rgba(3, 3, 6, 0.72) 42%, transparent 100%);
-}
-
-.inside-view__audience span {
-  width: clamp(20px, 4.4vw, 56px);
-  height: clamp(39px, 7.4vw, 74px);
-  flex: 1 1 36px;
-  max-width: 56px;
-  border-radius: 48% 48% 8px 8px / 34% 34% 10px 10px;
-  background: radial-gradient(circle at 50% 18%, #25232b 0 15%, transparent 16%), linear-gradient(#27252d 31%, #121117 32%);
-  box-shadow: 0 -5px 18px rgba(0, 0, 0, 0.42);
-}
-
-.inside-view__audience span:nth-child(3n) { height: clamp(43px, 8.3vw, 84px); opacity: 0.96; }
-.inside-view__audience span:nth-child(4n) { opacity: 0.7; transform: scale(0.88); }
-
 .inside-view__seat-note {
   position: absolute;
   z-index: 5;
@@ -125,7 +96,7 @@
 .inside-view--fullscreen { border: 0; border-radius: 0; }
 
 @media (max-width: 560px) {
-  .inside-view__room { min-height: 315px; padding: 22px 20px 62px; }
+  .inside-view__room { min-height: 315px; padding: 22px 20px 46px; }
   .inside-view__screen .screen__body { min-height: 215px; }
   .inside-view__screen .screen__topbar { padding: 7px 10px; }
   .inside-view__screen .screen__controls { gap: 5px; padding: 7px 10px; }
