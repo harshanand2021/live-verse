@@ -7,6 +7,7 @@ import TheatreSeats  from '../components/TheratreSeats';
 import ChatPanel      from '../components/ChatPanel';
 import HostControls   from '../components/HostControls';
 import InsideView     from '../components/InsideView';
+import PrivateTalk    from '../components/PrivateTalk';
 
 import './styles/WatchRoom.css';
 
@@ -20,6 +21,9 @@ export default function WatchRoom() {
   const isHost      = room.hostId === currentUser.id;
   const [isPlaying,     setIsPlaying]     = useState(true);
   const [isFullScreen,  setIsFullScreen]  = useState(false);
+  const [isChatOpen,    setIsChatOpen]    = useState(false);
+  const [talkSeat,      setTalkSeat]      = useState(null);
+  const [animateEntry,  setAnimateEntry]  = useState(false);
   const [messages,      setMessages]      = useState(mockChatMessages);
 
   // Hosts step straight onto their reserved seat; everyone else has to pick
@@ -29,6 +33,7 @@ export default function WatchRoom() {
 
   const handleEnterTheatre = () => {
     if (!selectedSeatId) return;
+    setAnimateEntry(true);
     setHasEntered(true);
   };
 
@@ -100,8 +105,8 @@ export default function WatchRoom() {
           </div>
         </div>
       ) : (
-        /* ── Main layout: [screen + seats] | [chat] ── */
-        <div className={`watch-room__body ${isFullScreen ? '' : 'container'}`}>
+        /* ── Theatre screen with a slide-out chat drawer ── */
+        <div className="watch-room__body">
 
           {/* Left column: screen on top, seats below */}
           <div className="watch-room__left">
@@ -111,17 +116,19 @@ export default function WatchRoom() {
                 isHost={isHost}
                 isPlaying={isPlaying}
                 isFullScreen={isFullScreen}
+                animateEntrance={animateEntry}
                 onTogglePlay={() => setIsPlaying(p => !p)}
                 onToggleFullScreen={() => setIsFullScreen(p => !p)}
               />
             </InsideView>
 
-            {/* 50-seat virtual theatre — hidden when fullscreen */}
-            {/* <TheatreSeats
+            {/* Select an occupied seat to start a one-to-one conversation. */}
+            <TheatreSeats
               isFullScreen={isFullScreen}
               selectedSeatId={selectedSeatId}
               locked
-            /> */}
+              onStartTalk={setTalkSeat}
+            />
 
             {/* Host controls panel — below seats, host only, hidden when fullscreen */}
             {isHost && !isFullScreen && (
@@ -129,13 +136,32 @@ export default function WatchRoom() {
             )}
           </div>
 
-          {/* Right column: chat — always visible, floats in fullscreen */}
+          <button
+            type="button"
+            className={`watch-room__chat-toggle ${isChatOpen ? 'watch-room__chat-toggle--open' : ''}`}
+            onClick={() => setIsChatOpen(open => !open)}
+            aria-controls="room-chat"
+            aria-expanded={isChatOpen}
+          >
+            <span>Chat</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+
+          {/* Chat stays out of the way until the drawer control is opened. */}
           <ChatPanel
+            id="room-chat"
             messages={messages}
             onSend={handleSend}
             viewerCount={room.viewerCount || 1}
             isFullScreen={isFullScreen}
+            isOpen={isChatOpen}
           />
+
+          {talkSeat && (
+            <PrivateTalk seat={talkSeat} onClose={() => setTalkSeat(null)} />
+          )}
         </div>
       )}
     </div>

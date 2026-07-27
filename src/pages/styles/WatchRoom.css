@@ -81,23 +81,13 @@
   flex-shrink: 0;
 }
 
-/* ─── Main body layout ─────────────────────────────────────── */
-/*
-  Wireframe: [screen + seats (left, wide)] | [chat (right, fixed width)]
-  The left col is a column: ScreenPlayer on top, TheatreSeats below, HostControls below that.
-  In fullscreen: left col fills the viewport, chat floats as overlay.
-*/
+/* ─── Main theatre layout ──────────────────────────────────── */
 .watch-room__body {
-  display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 18px;
-  align-items: start;
+  width: 100%;
   margin-top: 4px;
 }
 
-/* Fullscreen: no grid, left fills all, chat is position:fixed overlay (handled in ChatPanel.css) */
 .watch-room--fullscreen .watch-room__body {
-  display: block;
   margin: 0;
   padding: 0;
 }
@@ -107,6 +97,43 @@
   flex-direction: column;
   gap: 14px;
   min-width: 0;
+}
+
+.watch-room__chat-toggle {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  z-index: 111;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 12px 11px 14px;
+  color: var(--cream);
+  background: var(--ink-raised-2);
+  border: 1px solid var(--velvet-violet);
+  border-right: 0;
+  border-radius: 10px 0 0 10px;
+  box-shadow: var(--shadow-lift);
+  font-size: 13px;
+  font-weight: 700;
+  transform: translateY(-50%);
+  transition: right 0.28s ease, background 0.15s ease;
+}
+
+.watch-room__chat-toggle:hover {
+  background: var(--velvet);
+}
+
+.watch-room__chat-toggle--open {
+  right: min(380px, calc(100vw - 24px));
+}
+
+.watch-room__chat-toggle--open svg {
+  transform: rotate(180deg);
+}
+
+.watch-room__chat-toggle svg {
+  transition: transform 0.28s ease;
 }
 
 /* ─── Seat picker (shown before a seat is chosen — no screen yet) ── */
@@ -185,18 +212,11 @@
 }
 
 /* ─── Responsive ───────────────────────────────────────────── */
-@media (max-width: 900px) {
-  .watch-room__body {
-    grid-template-columns: 1fr;
-  }
-
-  /* On mobile, chat goes below seats */
-  .watch-room__body > .chat-panel {
-    height: 420px;
-  }
-}
-
 @media (max-width: 600px) {
   .watch-room__topbar { gap: 12px; }
   .watch-room__title  { font-size: 15px; }
+
+  .watch-room__chat-toggle--open {
+    right: calc(100vw - 108px);
+  }
 }
