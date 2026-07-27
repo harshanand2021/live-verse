@@ -6,6 +6,7 @@ import ScreenPlayer   from '../components/ScreenPlayer';
 import TheatreSeats  from '../components/TheratreSeats';
 import ChatPanel      from '../components/ChatPanel';
 import HostControls   from '../components/HostControls';
+import InsideView     from '../components/InsideView';
 
 import './styles/WatchRoom.css';
 
@@ -104,14 +105,16 @@ export default function WatchRoom() {
 
           {/* Left column: screen on top, seats below */}
           <div className="watch-room__left">
-            <ScreenPlayer
-              room={room}
-              isHost={isHost}
-              isPlaying={isPlaying}
-              isFullScreen={isFullScreen}
-              onTogglePlay={() => setIsPlaying(p => !p)}
-              onToggleFullScreen={() => setIsFullScreen(p => p)}
-            />
+            <InsideView isFullScreen={isFullScreen}>
+              <ScreenPlayer
+                room={room}
+                isHost={isHost}
+                isPlaying={isPlaying}
+                isFullScreen={isFullScreen}
+                onTogglePlay={() => setIsPlaying(p => !p)}
+                onToggleFullScreen={() => setIsFullScreen(p => !p)}
+              />
+            </InsideView>
 
             {/* 50-seat virtual theatre — hidden when fullscreen */}
             {/* <TheatreSeats
