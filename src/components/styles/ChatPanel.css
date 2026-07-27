@@ -1,25 +1,39 @@
 /* ─── Panel shell ──────────────────────────────────────────── */
 .chat-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 110;
   display: flex;
   flex-direction: column;
+  width: min(380px, calc(100vw - 24px));
+  height: 100dvh;
   background: var(--ink-raised-2);
-  border: 1px solid var(--velvet);
-  border-radius: var(--radius-lg);
-  height: 100%;
+  border: 1px solid var(--velvet-violet);
+  border-right: 0;
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
   min-height: 0;
   overflow: hidden;
+  box-shadow: var(--shadow-lift);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(100%);
+  visibility: hidden;
+  transition: transform 0.28s ease, opacity 0.2s ease, visibility 0s linear 0.28s;
 }
 
-/* In fullscreen mode: float as overlay on bottom-right */
+.chat-panel--open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+  visibility: visible;
+  transition: transform 0.28s ease, opacity 0.2s ease;
+}
+
+/* Retain the drawer styling while the player is in app fullscreen mode. */
 .chat-panel--fullscreen-float {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 320px;
-  height: 420px;
   z-index: 300;
-  box-shadow: var(--shadow-lift);
-  border-color: var(--velvet-violet);
 }
 
 /* ─── Header / tabs ──────────────────────────────────────── */

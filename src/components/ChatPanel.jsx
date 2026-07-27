@@ -12,10 +12,12 @@ function findUser(userId) {
 }
 
 export default function ChatPanel({
+  id,
   messages,
   onSend,
   viewerCount,
   isFullScreen,
+  isOpen,
 }) {
   const [draft, setDraft] = useState("");
   const [tab, setTab] = useState("chat"); // 'chat' | 'viewers'
@@ -37,7 +39,9 @@ export default function ChatPanel({
 
   return (
     <aside
-      className={`chat-panel ${isFullScreen ? "chat-panel--fullscreen-float" : ""}`}
+      id={id}
+      className={`chat-panel ${isOpen ? "chat-panel--open" : ""} ${isFullScreen ? "chat-panel--fullscreen-float" : ""}`}
+      aria-hidden={!isOpen}
     >
       {/* ── Header ── */}
       <div className="chat-panel__header">
