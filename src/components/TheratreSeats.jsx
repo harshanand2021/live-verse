@@ -12,19 +12,19 @@ const STATUS = {
 };
 
 // ─── Single seat button ───────────────────────────────────────────────────────
-function Seat({ seat, displayStatus, rowLabel, isClickable, onClick, onHover, isHovered }) {
+function Seat({ seat, displayStatus, rowLabel, isClickable, isTalkable, onClick, onHover, isHovered }) {
   const cfg    = STATUS[displayStatus] || STATUS.available;
   const seatId = `${rowLabel}${seat.num}`;
 
   return (
     <button
       type="button"
-      className={`seat ${cfg.cls} ${isHovered ? 'seat--hovered' : ''}`}
+      className={`seat ${cfg.cls} ${isTalkable ? 'seat--talkable' : ''} ${isHovered ? 'seat--hovered' : ''}`}
       disabled={!isClickable}
       aria-pressed={displayStatus === 'you'}
-      aria-label={`Seat ${seatId}, ${seat.name ? seat.name + ', ' : ''}${cfg.label}`}
-      title={seat.name ? `${seatId} — ${seat.name}` : seatId}
-      onClick={() => isClickable && onClick(seatId)}
+      aria-label={`Seat ${seatId}, ${seat.name ? seat.name + ', ' : ''}${cfg.label}${isTalkable ? ' — start private talk' : ''}`}
+      title={isTalkable ? `${seatId} — Talk privately with ${seat.name || 'this viewer'}` : seat.name ? `${seatId} — ${seat.name}` : seatId}
+      onClick={() => isClickable && onClick()}
       onMouseEnter={() => onHover({ seatId, seat: { ...seat, status: displayStatus }, rowLabel })}
       onMouseLeave={() => onHover(null)}
       onFocus={() => onHover({ seatId, seat: { ...seat, status: displayStatus }, rowLabel })}
@@ -36,7 +36,7 @@ function Seat({ seat, displayStatus, rowLabel, isClickable, onClick, onHover, is
 }
 
 // ─── One section block (e.g. PREMIUM ROW / PREMIER / CLASSIC) ────────────────
-function Section({ section, selectedSeatId, locked, onSelectSeat, onHover, hoveredId }) {
+function Section({ section, selectedSeatId, locked, onSelectSeat, onStartTalk, onHover, hoveredId }) {
   return (
     <div className="ts-section">
       {/* Section tier header */}
@@ -60,7 +60,9 @@ function Section({ section, selectedSeatId, locked, onSelectSeat, onHover, hover
             const seatId = `${row.rowLabel}${seat.num}`;
             const isSelected = seatId === selectedSeatId;
             const displayStatus = isSelected ? 'you' : seat.status;
-            const isClickable = !locked && (seat.status === 'available' || isSelected);
+            const isTalkable = Boolean(onStartTalk) && ['occupied', 'host'].includes(seat.status);
+            const isSeatSelectable = !locked && (seat.status === 'available' || isSelected);
+            const isClickable = isSeatSelectable || isTalkable;
 
             return (
               <Seat
@@ -69,7 +71,14 @@ function Section({ section, selectedSeatId, locked, onSelectSeat, onHover, hover
                 displayStatus={displayStatus}
                 rowLabel={row.rowLabel}
                 isClickable={isClickable}
-                onClick={id => onSelectSeat(isSelected ? null : id)}
+                isTalkable={isTalkable}
+                onClick={() => {
+                  if (isTalkable) {
+                    onStartTalk({ ...seat, seatId, status: displayStatus });
+                    return;
+                  }
+                  onSelectSeat(isSelected ? null : seatId);
+                }}
                 onHover={onHover}
                 isHovered={hoveredId === seatId}
               />
@@ -103,7 +112,7 @@ function Section({ section, selectedSeatId, locked, onSelectSeat, onHover, hover
 }
 
 // ─── Legend panel ─────────────────────────────────────────────────────────────
-function Legend({ hovered, selectedSeatId, locked }) {
+function Legend({ hovered, selectedSeatId, locked, canStartTalk }) {
   const items = [
     { cls: 'seat--host',      label: 'Host'      },
     { cls: 'seat--you',       label: 'You'       },
@@ -164,7 +173,9 @@ function Legend({ hovered, selectedSeatId, locked }) {
       </div>
 
       <p className="ts-legend__hint mono">
-        {locked
+        {canStartTalk
+          ? 'Select an occupied seat to talk privately'
+          : locked
           ? 'Hover any seat to see details'
           : selectedSeatId
             ? 'Tap your seat again to change it'
@@ -175,7 +186,13 @@ function Legend({ hovered, selectedSeatId, locked }) {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function TheatreSeats({ isFullScreen, selectedSeatId = null, onSelectSeat = () => {}, locked = false }) {
+export default function TheatreSeats({
+  isFullScreen,
+  selectedSeatId = null,
+  onSelectSeat = () => {},
+  onStartTalk,
+  locked = false,
+}) {
   const [hovered, setHovered] = useState(null);
 
   if (isFullScreen) return null;
@@ -189,8 +206,8 @@ export default function TheatreSeats({ isFullScreen, selectedSeatId = null, onSe
         <div className="ts-screen-arch__curtain ts-screen-arch__curtain--right" />
         <div className="ts-screen-arch__frame">
           <div className="ts-screen-arch__glow" />
-          <span className="ts-screen-arch__label mono">
-            {locked ? '— SCREEN THIS WAY —' : '— PICK YOUR SEAT TO REVEAL THE SCREEN —'}
+            <span className="ts-screen-arch__label mono">
+            {onStartTalk ? '— SELECT A VIEWER TO START A PRIVATE TALK —' : locked ? '— SCREEN THIS WAY —' : '— PICK YOUR SEAT TO REVEAL THE SCREEN —'}
           </span>
         </div>
       </div>
@@ -207,6 +224,7 @@ export default function TheatreSeats({ isFullScreen, selectedSeatId = null, onSe
               selectedSeatId={selectedSeatId}
               locked={locked}
               onSelectSeat={onSelectSeat}
+              onStartTalk={onStartTalk}
               onHover={setHovered}
               hoveredId={hovered?.seatId}
             />
@@ -214,7 +232,12 @@ export default function TheatreSeats({ isFullScreen, selectedSeatId = null, onSe
         </div>
 
         {/* Right-side legend panel */}
-        <Legend hovered={hovered} selectedSeatId={selectedSeatId} locked={locked} />
+        <Legend
+          hovered={hovered}
+          selectedSeatId={selectedSeatId}
+          locked={locked}
+          canStartTalk={Boolean(onStartTalk)}
+        />
       </div>
 
     </section>

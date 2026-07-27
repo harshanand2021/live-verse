@@ -267,6 +267,17 @@
 }
 .seat--occupied::before { background: rgba(255,220,100,0.18); }
 
+/* Occupied seats can be selected to start a private conversation. */
+.seat--talkable {
+  cursor: pointer;
+}
+
+.seat--talkable:hover,
+.seat--talkable:focus-visible {
+  filter: brightness(1.16);
+  box-shadow: 0 0 0 3px rgba(124, 107, 255, 0.38), 0 4px 12px rgba(124, 107, 255, 0.42);
+}
+
 /* Host seat — marquee red-orange */
 .seat--host {
   background: #c2390f;
