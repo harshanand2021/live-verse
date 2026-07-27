@@ -6,6 +6,7 @@ export default function ScreenPlayer({
   isHost,
   isPlaying,
   isFullScreen = true,
+  animateEntrance = true,
   onTogglePlay,
   onToggleFullScreen,
 }) {
@@ -24,7 +25,7 @@ export default function ScreenPlayer({
 
   return (
     <div
-      className={`screen-wrap ${isFullScreen ? "screen-wrap--fullscreen" : ""}`}
+      className={`screen-wrap ${isFullScreen ? "screen-wrap--fullscreen" : ""} ${animateEntrance ? "screen-wrap--entering" : ""}`}
       ref={containerRef}
     >
       {/* ── Top bar: room label + fullscreen button ── */}

@@ -1,5 +1,6 @@
 /* ─── Wrapper ─────────────────────────────────────────────── */
 .screen-wrap {
+  position: relative;
   display: flex;
   flex-direction: column;
   border-radius: var(--radius-lg);
@@ -7,6 +8,46 @@
   border: 1px solid var(--velvet);
   background: #000;
   box-shadow: var(--shadow-card);
+}
+
+/* Triggered only after a viewer confirms their seat. */
+.screen-wrap--entering {
+  transform-origin: 50% 45%;
+  animation: screen-enter 0.80s cubic-bezier(0.2, 0.88, 0.25, 1) both;
+}
+
+.screen-wrap--entering::after {
+  content: '';
+  position: absolute;
+  z-index: 10;
+  inset: 0;
+  pointer-events: none;
+  background: #000;
+  animation: screen-projector-reveal 0.72s cubic-bezier(0.2, 0.88, 0.25, 1) both;
+}
+
+.screen-wrap--entering .screen__topbar {
+  animation: screen-controls-enter 0.50s ease-out 0.28s both;
+}
+
+.screen-wrap--entering .screen__controls {
+  animation: screen-controls-enter 0.50s ease-out 0.38s both;
+}
+
+@keyframes screen-enter {
+  from { opacity: 0; transform: scale(0.94) translateY(20px); filter: brightness(0.45); }
+  to { opacity: 1; transform: scale(1) translateY(0); filter: brightness(1); }
+}
+
+@keyframes screen-projector-reveal {
+  0% { clip-path: circle(0% at 50% 48%); opacity: 1; }
+  65% { clip-path: circle(72% at 50% 48%); opacity: 0.82; }
+  100% { clip-path: circle(150% at 50% 48%); opacity: 0; visibility: hidden; }
+}
+
+@keyframes screen-controls-enter {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .screen-wrap--fullscreen {
