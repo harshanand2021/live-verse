@@ -1,21 +1,27 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import Logo from '../components/Logo';
 import Button from '../components/Button';
 import './styles/AuthPages.css';
 
 export default function Login() {
-  const { login, authLoading, authError } = useAuth();
+  const { user, authReady, login, authLoading, authError } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  // Send people back to whatever they were trying to open before being asked to sign in.
+  const redirectTo = location.state?.from?.pathname || '/rooms';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const ok = await login(email, password);
-    if (ok) navigate('/rooms');
+    if (ok) navigate(redirectTo, { replace: true });
   };
+
+  if (authReady && user) return <Navigate to={redirectTo} replace />;
 
   return (
     <div className="auth-page">

@@ -28,12 +28,21 @@ api.interceptors.request.use(
   },
 );
 
+const AUTH_ENDPOINTS = /\/api\/auth\//;
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // A rejected sign-in is the caller's to report, so only an expired session on a
+    // regular request should drop the token and bounce the user back to the login page.
+    const isAuthRequest = AUTH_ENDPOINTS.test(error.config?.url || "");
+
+    if (error.response?.status === 401 && !isAuthRequest) {
       localStorage.removeItem("accessToken");
-      window.location.href = "/login";
+
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
     }
 
     return Promise.reject(error);

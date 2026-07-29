@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import Logo from '../components/Logo';
 import Button from '../components/Button';
 import './styles/AuthPages.css';
 
 export default function Signup() {
-  const { signup, authLoading, authError } = useAuth();
+  const { user, authReady, signup, authLoading, authError } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -15,8 +15,10 @@ export default function Signup() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const ok = await signup(name, email, password);
-    if (ok) navigate('/rooms');
+    if (ok) navigate('/rooms', { replace: true });
   };
+
+  if (authReady && user) return <Navigate to="/rooms" replace />;
 
   return (
     <div className="auth-page">
@@ -54,7 +56,7 @@ export default function Signup() {
             <span>Password</span>
             <input
               type="password"
-              placeholder="Create a password"
+              placeholder="At least 8 characters"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="new-password"

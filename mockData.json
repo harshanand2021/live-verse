@@ -1,15 +1,14 @@
 {
-  "currentUser": { "id": "u-001", "name": "Harsh Anand", "handle": "@harsh", "avatarColor": "#FF5A3C", "isHost": true },
   "users": [
-    { "id": "u-001", "name": "Harsh Anand", "handle": "@harsh", "avatarColor": "#FF5A3C" },
-    { "id": "u-002", "name": "Kanishk Panwar", "handle": "@kanishk", "avatarColor": "#7C6BFF" },
-    { "id": "u-003", "name": "Manas Baliga", "handle": "@manas", "avatarColor": "#4ADE80" },
-    { "id": "u-004", "name": "Anushka Roy", "handle": "@anushka_r", "avatarColor": "#FFD166" },
-    { "id": "u-005", "name": "Ankita Singh", "handle": "@ankitas", "avatarColor": "#06D6A0" },
-    { "id": "u-006", "name": "Meera Joshi", "handle": "@meeraj", "avatarColor": "#EF476F" }
+    { "id": "u-001", "name": "Harsh Anand", "handle": "@harsh", "email": "harsh@liveverse.test", "password": "password123", "avatarColor": "#FF5A3C" },
+    { "id": "u-002", "name": "Kanishk Panwar", "handle": "@kanishk", "email": "kanishk@liveverse.test", "password": "password123", "avatarColor": "#7C6BFF" },
+    { "id": "u-003", "name": "Manas Baliga", "handle": "@manas", "email": "manas@liveverse.test", "password": "password123", "avatarColor": "#4ADE80" },
+    { "id": "u-004", "name": "Anushka Roy", "handle": "@anushka_r", "email": "anushka@liveverse.test", "password": "password123", "avatarColor": "#FFD166" },
+    { "id": "u-005", "name": "Ankita Singh", "handle": "@ankitas", "email": "ankita@liveverse.test", "password": "password123", "avatarColor": "#06D6A0" },
+    { "id": "u-006", "name": "Meera Joshi", "handle": "@meeraj", "email": "meera@liveverse.test", "password": "password123", "avatarColor": "#EF476F" }
   ],
   "rooms": [
-    { "id": "r-101", "title": "Interstellar — Director's Watch", "contentType": "movie", "visibility": "public", "status": "live", "hostName": "Harsh Anand", "hostId": "u-002", "viewerCount": 248, "posterColor": "#1B2A4A", "description": "Wormholes, watches, and a whole lot of crying.", "code": null, "startedAt": "21 minutes ago" },
+    { "id": "r-101", "title": "Interstellar — Director's Watch", "contentType": "movie", "visibility": "public", "status": "live", "hostName": "Harsh Anand", "hostId": "u-001", "viewerCount": 248, "posterColor": "#1B2A4A", "description": "Wormholes, watches, and a whole lot of crying.", "code": null, "startedAt": "21 minutes ago" },
     { "id": "r-102", "title": "The Last Stand — S2 Finale", "contentType": "series", "visibility": "public", "status": "live", "hostName": "Ankita Singh", "hostId": "u-005", "viewerCount": 132, "posterColor": "#4A1B2A", "description": "Season finale watch party. No spoilers.", "code": null, "startedAt": "8 minutes ago" },
     { "id": "r-103", "title": "IPL Final — Live Watch Party", "contentType": "sports", "visibility": "public", "status": "live", "hostName": "Anushka Roy", "hostId": "u-004", "viewerCount": 1204, "posterColor": "#1B4A2A", "description": "Every six gets a chat explosion.", "code": null, "startedAt": "1 hour ago" },
     { "id": "r-104", "title": "Midnight Animation Marathon", "contentType": "movie", "visibility": "private", "status": "live", "hostName": "Kanishk Panwar", "hostId": "u-002", "viewerCount": 32, "posterColor": "#3A1B4A", "description": "Friends-only. Three films, zero sleep.", "code": "MOON-42", "startedAt": "34 minutes ago" },
