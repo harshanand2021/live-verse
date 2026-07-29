@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from "react";
-import { mockUsers, mockReactions } from "../data/mockData";
 import "./styles/ChatPanel.css";
 
-function findUser(userId) {
+const reactions = ['❤️', '😂', '😮', '👏', '🔥'];
+
+function findUser(users, userId) {
   return (
-    mockUsers.find((u) => u.id === userId) || {
+    users.find((u) => u.id === userId) || {
       name: "Viewer",
       avatarColor: "#8A8294",
     }
@@ -18,6 +19,7 @@ export default function ChatPanel({
   viewerCount,
   isFullScreen,
   isOpen,
+  users = [],
 }) {
   const [draft, setDraft] = useState("");
   const [tab, setTab] = useState("chat"); // 'chat' | 'viewers'
@@ -75,7 +77,7 @@ export default function ChatPanel({
             aria-label="Chat messages"
           >
             {messages.map((msg) => {
-              const author = findUser(msg.userId);
+              const author = findUser(users, msg.userId);
               return (
                 <div key={msg.id} className="chat-msg">
                   <span
@@ -99,7 +101,7 @@ export default function ChatPanel({
 
           {/* Quick reactions */}
           <div className="chat-panel__reactions" aria-label="Quick reactions">
-            {mockReactions.map((r) => (
+            {reactions.map((r) => (
               <button
                 key={r}
                 type="button"
@@ -145,7 +147,7 @@ export default function ChatPanel({
       {/* ── Viewers tab ── */}
       {tab === "viewers" && (
         <div className="chat-panel__viewers">
-          {mockUsers.map((u) => (
+          {users.map((u) => (
             <div key={u.id} className="viewer-row">
               <span
                 className="viewer-row__avatar"

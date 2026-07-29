@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { mockRooms, mockChatMessages, currentUser } from '../data/mockData';
+import { addComment, claimSeat, endLive, getLiveById, getLiveComments, getLiveSeats, setLiveMedia } from '../api/liveApi';
+import { getCurrentUser, getUsers } from '../api/userApi';
 
 import ScreenPlayer   from '../components/ScreenPlayer';
 import TheatreSeats  from '../components/TheratreSeats';
@@ -13,40 +14,154 @@ import './styles/WatchRoom.css';
 
 export default function WatchRoom() {
   const { roomId } = useParams();
-  const room = useMemo(
-    () => mockRooms.find(r => r.id === roomId) || mockRooms[0],
-    [roomId]
-  );
-
-  const isHost      = room.hostId === currentUser.id;
+  const [room, setRoom] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [seatSections, setSeatSections] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [isPlaying,     setIsPlaying]     = useState(true);
   const [isFullScreen,  setIsFullScreen]  = useState(false);
   const [isChatOpen,    setIsChatOpen]    = useState(false);
   const [talkSeat,      setTalkSeat]      = useState(null);
   const [animateEntry,  setAnimateEntry]  = useState(false);
-  const [messages,      setMessages]      = useState(mockChatMessages);
+  const [messages,      setMessages]      = useState([]);
+  const [sharedScreenStream, setSharedScreenStream] = useState(null);
+  const [sharedSurface, setSharedSurface] = useState('');
+  const [screenShareError, setScreenShareError] = useState('');
+  const [isEndingShow, setIsEndingShow] = useState(false);
+  const [endShowError, setEndShowError] = useState('');
+  const [isUpdatingMedia, setIsUpdatingMedia] = useState(false);
+  const [mediaError, setMediaError] = useState('');
 
   // Hosts step straight onto their reserved seat; everyone else has to pick
   // one before the screen is revealed — no seat, no show.
   const [selectedSeatId, setSelectedSeatId] = useState(null);
-  const [hasEntered,     setHasEntered]     = useState(isHost);
+  const [hasEntered,     setHasEntered]     = useState(false);
 
-  const handleEnterTheatre = () => {
-    if (!selectedSeatId) return;
-    setAnimateEntry(true);
-    setHasEntered(true);
+  useEffect(() => {
+    Promise.all([getLiveById(roomId), getLiveComments(roomId), getLiveSeats(roomId), getCurrentUser(), getUsers()])
+      .then(([roomResponse, messagesResponse, seatsResponse, userResponse, usersResponse]) => {
+        setRoom(roomResponse.data);
+        setMessages(messagesResponse.data);
+        setSeatSections(seatsResponse.data);
+        setCurrentUser(userResponse.data);
+        setUsers(usersResponse.data);
+        setHasEntered(roomResponse.data.hostId === userResponse.data.id);
+      })
+      .catch((error) => setLoadError(error.response?.data?.message || 'Unable to load this room.'))
+      .finally(() => setLoading(false));
+  }, [roomId]);
+
+  const isHost = room?.hostId === currentUser?.id;
+
+  const stopScreenShare = useCallback(() => {
+    setSharedScreenStream((stream) => {
+      stream?.getTracks().forEach((track) => track.stop());
+      return null;
+    });
+    setSharedSurface('');
+  }, []);
+
+  useEffect(() => () => {
+    sharedScreenStream?.getTracks().forEach((track) => track.stop());
+  }, [sharedScreenStream]);
+
+  const startScreenShare = async ({ preferTab = false } = {}) => {
+    if (!isHost) return;
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+      setScreenShareError('Screen sharing is not supported by this browser.');
+      return;
+    }
+
+    try {
+      setScreenShareError('');
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: true,
+        preferCurrentTab: preferTab,
+        selfBrowserSurface: 'exclude',
+        surfaceSwitching: 'include',
+      });
+      const videoTrack = stream.getVideoTracks()[0];
+      setSharedSurface(videoTrack?.getSettings?.().displaySurface || '');
+      videoTrack?.addEventListener('ended', () => {
+        setSharedScreenStream((activeStream) => activeStream === stream ? null : activeStream);
+        setSharedSurface('');
+      });
+      setSharedScreenStream(stream);
+    } catch (error) {
+      if (error.name !== 'NotAllowedError') {
+        setScreenShareError('Unable to start screen sharing. Please try again.');
+      }
+    }
   };
 
-  const handleSend = text => {
-    setMessages(prev => [
-      ...prev,
-      {
-        id:     `m-${Date.now()}`,
-        userId: currentUser.id,
-        text,
-        time:   new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      },
-    ]);
+  const toggleScreenShare = () => {
+    if (sharedScreenStream) {
+      stopScreenShare();
+      return;
+    }
+    startScreenShare();
+  };
+
+  const handleEndShow = async () => {
+    if (!isHost || isEndingShow) return;
+    if (!window.confirm('End this showing for everyone? This cannot be undone.')) return;
+
+    setEndShowError('');
+    setIsEndingShow(true);
+    try {
+      const { data: endedRoom } = await endLive(room.id);
+      stopScreenShare();
+      setIsPlaying(false);
+      setRoom(endedRoom);
+    } catch (error) {
+      setEndShowError(error.response?.data?.message || 'Unable to end the showing. Please try again.');
+    } finally {
+      setIsEndingShow(false);
+    }
+  };
+
+  const handlePlayYouTube = async (youtubeUrl) => {
+    if (!isHost || isUpdatingMedia) return;
+    const videoId = getYouTubeVideoId(youtubeUrl);
+    if (!videoId) {
+      setMediaError('Enter a valid YouTube video URL.');
+      return;
+    }
+
+    setMediaError('');
+    setIsUpdatingMedia(true);
+    try {
+      const { data: updatedRoom } = await setLiveMedia(room.id, { youtubeVideoId: videoId });
+      stopScreenShare();
+      setIsPlaying(true);
+      setRoom(updatedRoom);
+    } catch (error) {
+      setMediaError(error.response?.data?.message || 'Unable to load this YouTube video.');
+    } finally {
+      setIsUpdatingMedia(false);
+    }
+  };
+
+  if (loading) return <div className="watch-room"><div className="container">Loading room…</div></div>;
+  if (loadError || !room || !currentUser) return <div className="watch-room"><div className="container">{loadError || 'Room not found.'}</div></div>;
+
+  const handleEnterTheatre = async () => {
+    if (!selectedSeatId) return;
+    try {
+      await claimSeat(room.id, selectedSeatId);
+      setAnimateEntry(true);
+      setHasEntered(true);
+    } catch (error) {
+      setLoadError(error.response?.data?.message || 'Unable to claim that seat.');
+    }
+  };
+
+  const handleSend = async (text) => {
+    const { data: message } = await addComment(room.id, { text });
+    setMessages((previous) => [...previous, message]);
   };
 
   return (
@@ -85,6 +200,7 @@ export default function WatchRoom() {
           </div>
 
           <TheatreSeats
+            sections={seatSections}
             selectedSeatId={selectedSeatId}
             onSelectSeat={setSelectedSeatId}
             locked={false}
@@ -117,6 +233,10 @@ export default function WatchRoom() {
                 isPlaying={isPlaying}
                 isFullScreen={isFullScreen}
                 animateEntrance={animateEntry}
+                sharedScreenStream={sharedScreenStream}
+                sharedSurface={sharedSurface}
+                isShowEnded={room.status === 'ended'}
+                youtubeVideoId={room.youtubeVideoId}
                 onTogglePlay={() => setIsPlaying(p => !p)}
                 onToggleFullScreen={() => setIsFullScreen(p => !p)}
               />
@@ -124,6 +244,7 @@ export default function WatchRoom() {
 
             {/* Select an occupied seat to start a one-to-one conversation. */}
             <TheatreSeats
+              sections={seatSections}
               isFullScreen={isFullScreen}
               selectedSeatId={selectedSeatId}
               locked
@@ -131,8 +252,22 @@ export default function WatchRoom() {
             />
 
             {/* Host controls panel — below seats, host only, hidden when fullscreen */}
-            {isHost && !isFullScreen && (
-              <HostControls room={room} />
+            {isHost && !isFullScreen && room.status !== 'ended' && (
+              <HostControls
+                room={room}
+                users={users}
+                isScreenSharing={Boolean(sharedScreenStream)}
+                screenShareError={screenShareError}
+                onToggleScreenShare={toggleScreenShare}
+                onShareBrowserTab={() => startScreenShare({ preferTab: true })}
+                onPlayYouTube={handlePlayYouTube}
+                isUpdatingMedia={isUpdatingMedia}
+                mediaError={mediaError}
+                youtubeVideoId={room.youtubeVideoId}
+                isEndingShow={isEndingShow}
+                endShowError={endShowError}
+                onEndShow={handleEndShow}
+              />
             )}
           </div>
 
@@ -154,16 +289,32 @@ export default function WatchRoom() {
             id="room-chat"
             messages={messages}
             onSend={handleSend}
+            users={users}
             viewerCount={room.viewerCount || 1}
             isFullScreen={isFullScreen}
             isOpen={isChatOpen}
           />
 
           {talkSeat && (
-            <PrivateTalk seat={talkSeat} onClose={() => setTalkSeat(null)} />
+            <PrivateTalk seat={talkSeat} currentUser={currentUser} users={users} onClose={() => setTalkSeat(null)} />
           )}
         </div>
       )}
     </div>
   );
+}
+
+function getYouTubeVideoId(value) {
+  try {
+    const url = new URL(value.trim());
+    const hostname = url.hostname.replace(/^www\./, '');
+    const videoId = hostname === 'youtu.be'
+      ? url.pathname.slice(1).split('/')[0]
+      : hostname.endsWith('youtube.com')
+        ? url.searchParams.get('v') || url.pathname.match(/^\/(?:embed|shorts)\/([^/]+)/)?.[1]
+        : null;
+    return /^[\w-]{11}$/.test(videoId || '') ? videoId : null;
+  } catch {
+    return null;
+  }
 }

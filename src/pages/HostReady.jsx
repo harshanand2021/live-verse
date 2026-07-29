@@ -1,6 +1,6 @@
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
-import { CONTENT_TYPES, ROOM_VISIBILITY } from '../data/mockData';
+import { CONTENT_TYPES, ROOM_VISIBILITY } from '../constants/live';
 import './styles/HostReady.css';
 
 const CONTENT_LABEL = {
@@ -55,7 +55,7 @@ export default function HostReady() {
           )}
 
           <div className="host-ready__actions">
-            <Button size="lg" onClick={() => navigate('/room/r-104')}>
+            <Button size="lg" onClick={() => navigate(`/room/${state.id}`)}>
               {scheduleNow ? 'Enter Room as Host' : 'Go to Room'}
             </Button>
             <Link to="/rooms">

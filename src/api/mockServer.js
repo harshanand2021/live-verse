@@ -3,6 +3,7 @@ import seedData from '../../mockData.json';
 // A tiny in-memory API. Its data is seeded from mockData.json and every response
 // follows Axios's adapter contract, so components use the same calls as a real API.
 const database = structuredClone(seedData);
+const ENDED_ROOM_RETENTION_MS = 10 * 60 * 1000;
 const wait = () => new Promise((resolve) => setTimeout(resolve, 250));
 const clone = (value) => structuredClone(value);
 const parseBody = (data) => (typeof data === 'string' ? JSON.parse(data || '{}') : data || {});
@@ -13,7 +14,20 @@ function error(config, status, message) {
 }
 
 function roomById(id) {
+  removeExpiredRooms();
   return database.rooms.find((room) => room.id === id);
+}
+
+function removeExpiredRooms() {
+  const now = Date.now();
+  database.rooms = database.rooms.filter((room) =>
+    room.status !== 'ended' || !room.endedAt || now - new Date(room.endedAt).getTime() < ENDED_ROOM_RETENTION_MS,
+  );
+}
+
+function scheduleRoomRemoval(room) {
+  const delay = Math.max(0, ENDED_ROOM_RETENTION_MS - (Date.now() - new Date(room.endedAt).getTime()));
+  window.setTimeout(removeExpiredRooms, delay);
 }
 
 export default async function mockServer(config) {
@@ -48,7 +62,10 @@ export default async function mockServer(config) {
     const user = database.users.find((item) => item.id === userMatch[1]);
     return user ? response(config, 200, user) : error(config, 404, 'User not found');
   }
-  if (method === 'get' && path === '/api/live') return response(config, 200, database.rooms);
+  if (method === 'get' && path === '/api/live') {
+    removeExpiredRooms();
+    return response(config, 200, database.rooms);
+  }
   if (method === 'post' && path === '/api/live') {
     const id = `r-${Date.now()}`;
     const room = { id, title: body.title, description: body.description || '', contentType: body.contentType, visibility: body.visibility, code: body.code || null, status: body.scheduleNow ? 'live' : 'scheduled', hostId: database.currentUser.id, hostName: database.currentUser.name, viewerCount: 1, posterColor: '#3A1B4A', startedAt: body.scheduleNow ? 'Just now' : 'Starts soon' };
@@ -62,13 +79,26 @@ export default async function mockServer(config) {
     const action = liveActionMatch[2];
     if (action === 'join') room.viewerCount += 1;
     if (action === 'leave') room.viewerCount = Math.max(0, room.viewerCount - 1);
-    if (action === 'end') room.status = 'ended';
+    if (action === 'end') {
+      if (room.hostId !== database.currentUser.id) return error(config, 403, 'Only the host can end this showing');
+      room.status = 'ended';
+      room.endedAt = new Date().toISOString();
+      scheduleRoomRemoval(room);
+    }
     return response(config, 200, room);
   }
   const roomMatch = path.match(/^\/api\/live\/([^/]+)$/);
   if (method === 'get' && roomMatch) {
     const room = roomById(roomMatch[1]);
     return room ? response(config, 200, room) : error(config, 404, 'Room not found');
+  }
+  const mediaMatch = path.match(/^\/api\/live\/([^/]+)\/media$/);
+  if (method === 'put' && mediaMatch) {
+    const room = roomById(mediaMatch[1]);
+    if (!room) return error(config, 404, 'Room not found');
+    if (room.hostId !== database.currentUser.id) return error(config, 403, 'Only the host can change the playing media');
+    room.youtubeVideoId = body.youtubeVideoId || null;
+    return response(config, 200, room);
   }
   const commentsMatch = path.match(/^\/api\/live\/([^/]+)\/comments$/);
   if (commentsMatch && method === 'get') return response(config, 200, database.messages);

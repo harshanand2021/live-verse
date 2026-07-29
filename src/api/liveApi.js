@@ -16,3 +16,9 @@ export const getLiveComments = (id) => api.get(`/api/live/${id}/comments`);
 
 export const addComment = (id, comment) =>
   api.post(`/api/live/${id}/comments`, comment);
+
+export const getLiveSeats = (id) => api.get(`/api/live/${id}/seats`);
+
+export const claimSeat = (id, seatId) => api.post(`/api/live/${id}/seats/${seatId}`);
+
+export const setLiveMedia = (id, payload) => api.put(`/api/live/${id}/media`, payload);

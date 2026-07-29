@@ -2,7 +2,9 @@ import api from "./axios"
 
 export const getCurrentUser = () => api.get("/api/users/me")
 
-export const getUserById = () => api.get(`/api/users/${id}`);
+export const getUserById = (id) => api.get(`/api/users/${id}`);
+
+export const getUsers = () => api.get('/api/users');
 
 export const updateProfile = (data) => api.put("/api/users/profile", data)
 

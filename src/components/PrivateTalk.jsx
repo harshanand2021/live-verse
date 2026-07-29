@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { currentUser, mockUsers } from '../data/mockData';
 import './styles/PrivateTalk.css';
 
-function getParticipant(seat) {
+function getParticipant(seat, users) {
   const name = seat.name || `Viewer in seat ${seat.seatId}`;
   const firstName = name.replace(/\s*\(.*\)/, '').split(' ')[0].toLowerCase();
-  const user = mockUsers.find(candidate => candidate.name.split(' ')[0].toLowerCase() === firstName);
+  const user = users.find(candidate => candidate.name.split(' ')[0].toLowerCase() === firstName);
 
   return user || {
     name,
@@ -31,8 +30,8 @@ function CameraIcon({ off }) {
 }
 
 /** A local UI shell for a one-to-one conversation; connect it to signalling/WebRTC for live media. */
-export default function PrivateTalk({ seat, onClose }) {
-  const participant = getParticipant(seat);
+export default function PrivateTalk({ seat, onClose, currentUser, users = [] }) {
+  const participant = getParticipant(seat, users);
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOff, setIsCameraOff] = useState(false);
 

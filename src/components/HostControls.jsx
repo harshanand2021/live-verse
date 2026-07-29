@@ -1,18 +1,41 @@
 import { useState } from 'react';
-import { mockUsers } from '../data/mockData';
 import Button from './Button';
 import './styles/HostControls.css';
 
-export default function HostControls({ room }) {
+export default function HostControls({
+  room,
+  users = [],
+  isScreenSharing = false,
+  screenShareError = '',
+  onToggleScreenShare,
+  onShareBrowserTab,
+  onPlayYouTube,
+  isUpdatingMedia = false,
+  mediaError = '',
+  youtubeVideoId = '',
+  isEndingShow = false,
+  endShowError = '',
+  onEndShow,
+}) {
   const [tab, setTab] = useState('queue');
-  const viewers = mockUsers.slice(1, 5);
+  const [youtubeUrl, setYoutubeUrl] = useState(youtubeVideoId ? `https://youtu.be/${youtubeVideoId}` : '');
+  const viewers = users.filter((user) => user.id !== room.hostId).slice(0, 4);
 
   return (
     <div className="host-controls">
       <div className="host-controls__header">
         <span className="host-controls__badge">HOST</span>
         <h3>Room Controls</h3>
+        <Button
+          variant={isScreenSharing ? 'danger' : 'secondary'}
+          size="sm"
+          onClick={onToggleScreenShare}
+        >
+          {isScreenSharing ? 'Stop sharing' : 'Share screen'}
+        </Button>
       </div>
+
+      {screenShareError ? <p className="host-controls__error" role="alert">{screenShareError}</p> : null}
 
       <div className="host-controls__tabs">
         {[
@@ -61,6 +84,37 @@ export default function HostControls({ room }) {
 
       {tab === 'settings' ? (
         <div className="host-panel host-panel--settings">
+          <form className="host-youtube" onSubmit={(event) => {
+            event.preventDefault();
+            onPlayYouTube?.(youtubeUrl);
+          }}>
+            <div>
+              <strong>Play a YouTube video</strong>
+              <p>Paste a YouTube link to show it on the theatre screen.</p>
+            </div>
+            <div className="host-youtube__controls">
+              <input
+                type="url"
+                value={youtubeUrl}
+                onChange={(event) => setYoutubeUrl(event.target.value)}
+                placeholder="https://youtu.be/..."
+                aria-label="YouTube video URL"
+              />
+              <Button type="submit" variant="secondary" size="sm" loading={isUpdatingMedia}>
+                Play video
+              </Button>
+            </div>
+            {mediaError ? <p className="host-controls__error host-controls__error--inline" role="alert">{mediaError}</p> : null}
+          </form>
+          <div className="host-share-tab">
+            <div>
+              <strong>Share a browser tab</strong>
+              <p>Pick one tab in your browser’s sharing prompt.</p>
+            </div>
+            <Button variant="ghost" size="sm" onClick={onShareBrowserTab} disabled={isScreenSharing}>
+              Share tab
+            </Button>
+          </div>
           <label className="host-toggle">
             <span>Allow chat</span>
             <input type="checkbox" defaultChecked />
@@ -73,7 +127,10 @@ export default function HostControls({ room }) {
             <span>Lock room (no new joins)</span>
             <input type="checkbox" />
           </label>
-          <Button variant="danger" size="sm" fullWidth>End Showing for Everyone</Button>
+          {endShowError ? <p className="host-controls__error" role="alert">{endShowError}</p> : null}
+          <Button variant="danger" size="sm" fullWidth loading={isEndingShow} onClick={onEndShow}>
+            End Showing for Everyone
+          </Button>
         </div>
       ) : null}
     </div>

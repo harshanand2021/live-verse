@@ -1,12 +1,17 @@
 import axios from "axios";
+import mockServer from './mockServer';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: import.meta.env.VITE_API_URL || '/',
   timeout: 10000,
   headers: {
     "Content-Type": "application/json",
   },
 });
+
+if (import.meta.env.VITE_USE_DUMMY_API !== 'false') {
+  api.defaults.adapter = mockServer;
+}
 
 api.interceptors.request.use(
   (config) => {

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ROOM_STATUS, ROOM_VISIBILITY, CONTENT_TYPES } from '../data/mockData';
+import { ROOM_STATUS, ROOM_VISIBILITY, CONTENT_TYPES } from '../constants/live';
 import './styles/Roomcard.css';
 
 const CONTENT_LABEL = {

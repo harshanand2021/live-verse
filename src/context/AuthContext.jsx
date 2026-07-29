@@ -1,6 +1,5 @@
-import { createContext, useContext, useState, useCallback } from 'react';
-import { currentUser as mockCurrentUser, fakeDelay } from '../data/mockData';
-// import apiClient from "../api/apiClient";
+import { createContext, useState, useCallback } from 'react';
+import { login as loginRequest, register, logout as logoutRequest } from '../api/authApi';
 
 const AuthContext = createContext(null);
 
@@ -16,11 +15,17 @@ export function AuthProvider({ children }) {
       return false;
     }
     setAuthLoading(true);
-    await fakeDelay(700);
-    setAuthLoading(false);
-    // Mock: any non-empty credentials succeed
-    setUser({ ...mockCurrentUser });
-    return true;
+    try {
+      const { data } = await loginRequest({ email, password });
+      localStorage.setItem('accessToken', data.accessToken);
+      setUser(data.user);
+      return true;
+    } catch (error) {
+      setAuthError(error.response?.data?.message || 'Unable to sign in. Please try again.');
+      return false;
+    } finally {
+      setAuthLoading(false);
+    }
   }, []);
 
   const signup = useCallback(async (name, email, password) => {
@@ -30,13 +35,22 @@ export function AuthProvider({ children }) {
       return false;
     }
     setAuthLoading(true);
-    await fakeDelay(900);
-    setAuthLoading(false);
-    setUser({ ...mockCurrentUser, name, handle: '@' + name.toLowerCase().replace(/\s+/g, '') });
-    return true;
+    try {
+      const { data } = await register({ name, email, password });
+      localStorage.setItem('accessToken', data.accessToken);
+      setUser(data.user);
+      return true;
+    } catch (error) {
+      setAuthError(error.response?.data?.message || 'Unable to create your account. Please try again.');
+      return false;
+    } finally {
+      setAuthLoading(false);
+    }
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    await logoutRequest().catch(() => undefined);
+    localStorage.removeItem('accessToken');
     setUser(null);
   }, []);
 
@@ -45,8 +59,4 @@ export function AuthProvider({ children }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
-  return ctx;
-}
+export { AuthContext };

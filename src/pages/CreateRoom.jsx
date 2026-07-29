@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
-import { CONTENT_TYPES, ROOM_VISIBILITY } from '../data/mockData';
+import { CONTENT_TYPES, ROOM_VISIBILITY } from '../constants/live';
+import { createLive } from '../api/liveApi';
 import './styles/CreateRoom.css';
 
 function generateCode() {
@@ -23,7 +24,7 @@ export default function CreateRoom() {
 
   const previewCode = visibility === ROOM_VISIBILITY.PRIVATE ? generateCode() : null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) {
       setError('Give your room a title before you open the doors.');
@@ -31,19 +32,14 @@ export default function CreateRoom() {
     }
     setError('');
     setCreating(true);
-    // Mock create - in the real app this posts to the backend and gets a room id back
-    setTimeout(() => {
-      navigate('/host/r-new', {
-        state: {
-          title,
-          description,
-          contentType,
-          visibility,
-          code: previewCode,
-          scheduleNow,
-        },
-      });
-    }, 600);
+    try {
+      const { data: room } = await createLive({ title, description, contentType, visibility, code: previewCode, scheduleNow });
+      navigate(`/host/${room.id}`, { state: room });
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || 'Unable to create this room. Please try again.');
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (

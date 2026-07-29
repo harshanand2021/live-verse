@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { SEAT_SECTIONS } from '../data/mockData';
 import './styles/TheratreSeats.css';
 
 // ─── Status config ────────────────────────────────────────────────────────────
@@ -112,7 +111,7 @@ function Section({ section, selectedSeatId, locked, onSelectSeat, onStartTalk, o
 }
 
 // ─── Legend panel ─────────────────────────────────────────────────────────────
-function Legend({ hovered, selectedSeatId, locked, canStartTalk }) {
+function Legend({ hovered, selectedSeatId, locked, canStartTalk, sections }) {
   const items = [
     { cls: 'seat--host',      label: 'Host'      },
     { cls: 'seat--you',       label: 'You'       },
@@ -121,7 +120,7 @@ function Legend({ hovered, selectedSeatId, locked, canStartTalk }) {
     { cls: 'seat--sold',      label: 'Sold'      },
   ];
 
-  const totalSeats    = SEAT_SECTIONS.flatMap(s => s.rows.flatMap(r => r.seats));
+  const totalSeats    = sections.flatMap(s => s.rows.flatMap(r => r.seats));
   const occupiedCount = totalSeats.filter(s => ['occupied', 'host'].includes(s.status)).length
     + (selectedSeatId ? 1 : 0);
   const availCount    = totalSeats.filter(s => s.status === 'available').length
@@ -187,6 +186,7 @@ function Legend({ hovered, selectedSeatId, locked, canStartTalk }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function TheatreSeats({
+  sections = [],
   isFullScreen,
   selectedSeatId = null,
   onSelectSeat = () => {},
@@ -217,7 +217,7 @@ export default function TheatreSeats({
 
         {/* Seating floor (perspective container) */}
         <div className="ts-floor">
-          {SEAT_SECTIONS.map(section => (
+          {sections.map(section => (
             <Section
               key={section.id}
               section={section}
@@ -237,6 +237,7 @@ export default function TheatreSeats({
           selectedSeatId={selectedSeatId}
           locked={locked}
           canStartTalk={Boolean(onStartTalk)}
+          sections={sections}
         />
       </div>
 

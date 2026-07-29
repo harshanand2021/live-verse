@@ -1,5 +1,8 @@
 /* ─── Outer shell ──────────────────────────────────────────── */
 .theatre-seats {
+  --seat-size: clamp(20px, 2.8vw, 28px);
+  --row-label-size: clamp(20px, 2.6vw, 28px);
+  --row-gap: clamp(4px, 0.8vw, 8px);
   display: flex;
   flex-direction: column;
   background: #0d0b10;
@@ -137,9 +140,10 @@
 }
 
 .ts-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: var(--row-label-size) minmax(0, 1fr) var(--row-label-size);
   align-items: center;
-  gap: 8px;
+  column-gap: var(--row-gap);
   width: var(--row-width, 100%);
   margin: 0 auto;
 }
@@ -157,18 +161,19 @@
 .ts-section:nth-child(3) .ts-row--5 { --row-width: 100%; }
 
 .ts-row__label {
-  width: 18px;
+  display: grid;
+  place-items: center;
+  inline-size: var(--row-label-size);
+  min-block-size: var(--seat-size);
+  line-height: 1;
   font-size: 11px;
   color: var(--mute);
-  text-align: center;
-  flex-shrink: 0;
   letter-spacing: 0.03em;
 }
 
 .ts-row__label--right {
-  /* mirror on right — shows row letter on both sides like real cinemas */
-  width: 7px;
-  font-size: 10px;
+  /* Match the left-hand track exactly so every row stays centred. */
+  font-size: inherit;
 }
 
 .ts-row__seats {
@@ -195,8 +200,8 @@
 
 /* ─── Individual seat — a chair seen straight from above ─────── */
 .seat {
-  width: clamp(20px, 2.8vw, 28px);
-  height: clamp(20px, 2.8vw, 28px);
+  width: var(--seat-size);
+  height: var(--seat-size);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -463,10 +468,13 @@
   .ts-screen-arch__curtain { width: 35px; }
   .ts-screen-arch__frame { left: 35px; right: 35px; }
   .ts-screen-arch__label { font-size: 8px; letter-spacing: 0.1em; }
+  .theatre-seats {
+    --seat-size: 18px;
+    --row-label-size: 18px;
+    --row-gap: 3px;
+  }
   .ts-floor { padding: 14px 8px 20px; }
-  .ts-row { gap: 3px; }
-  .ts-row__label { width: 13px; font-size: 9px; }
-  .ts-row__label--right { width: 4px; }
+  .ts-row__label { font-size: 9px; }
   .ts-row__seats { grid-template-columns: minmax(0, 1fr) 11px minmax(0, 1fr); }
   .ts-row__bank { gap: 2px; }
   .seat { width: 18px; height: 18px; font-size: 7px; }

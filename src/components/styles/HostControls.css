@@ -29,6 +29,17 @@
 .host-controls__header h3 {
   font-size: 14.5px;
   color: var(--cream);
+  flex: 1;
+}
+
+.host-controls__header .lv-btn {
+  margin-left: auto;
+}
+
+.host-controls__error {
+  margin: 10px 18px 0;
+  color: var(--danger);
+  font-size: 12px;
 }
 
 .host-controls__tabs {
@@ -155,4 +166,75 @@
 
 .host-panel--settings {
   gap: 14px;
+}
+
+.host-share-tab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--velvet);
+  border-radius: var(--radius-md);
+  background: var(--ink-raised);
+}
+
+.host-youtube {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--velvet);
+  border-radius: var(--radius-md);
+  background: var(--ink-raised);
+}
+
+.host-youtube strong {
+  display: block;
+  color: var(--cream);
+  font-size: 13px;
+}
+
+.host-youtube p {
+  margin-top: 3px;
+  color: var(--mute);
+  font-size: 11px;
+}
+
+.host-youtube__controls {
+  display: flex;
+  gap: 8px;
+}
+
+.host-youtube input {
+  min-width: 0;
+  flex: 1;
+  padding: 7px 9px;
+  color: var(--cream);
+  border: 1px solid var(--velvet);
+  border-radius: 6px;
+  outline: none;
+  background: var(--ink);
+  font: inherit;
+  font-size: 12px;
+}
+
+.host-youtube input:focus {
+  border-color: var(--velvet-violet);
+}
+
+.host-controls__error--inline {
+  margin: 0;
+}
+
+.host-share-tab strong {
+  display: block;
+  color: var(--cream);
+  font-size: 13px;
+}
+
+.host-share-tab p {
+  margin-top: 3px;
+  color: var(--mute);
+  font-size: 11px;
 }

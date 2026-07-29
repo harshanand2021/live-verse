@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import RoomCard from '../components/RoomCard';
 import Button from '../components/Button';
-import { mockRooms } from '../data/mockData';
+import { getAllLives } from '../api/liveApi';
 import './styles/RoomList.css';
 
 const FILTERS = [
@@ -16,16 +16,32 @@ export default function RoomList() {
   const [filter, setFilter] = useState('all');
   const [query, setQuery] = useState('');
   const [joinCode, setJoinCode] = useState('');
+  const [rooms, setRooms] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+
+  const loadRooms = useCallback(() => {
+    getAllLives()
+      .then(({ data }) => setRooms(data))
+      .catch(() => setLoadError('Unable to load rooms right now.'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    loadRooms();
+    const refreshInterval = window.setInterval(loadRooms, 30_000);
+    return () => window.clearInterval(refreshInterval);
+  }, [loadRooms]);
 
   const filteredRooms = useMemo(() => {
-    return mockRooms.filter((room) => {
+    return rooms.filter((room) => {
       if (filter === 'public' && room.visibility !== 'public') return false;
       if (filter === 'private' && room.visibility !== 'private') return false;
       if (filter === 'live' && room.status !== 'live') return true;
       if (query && !room.title.toLowerCase().includes(query.toLowerCase())) return false;
       return true;
     });
-  }, [filter, query]);
+  }, [filter, query, rooms]);
 
   return (
     <div className="room-list-page">
@@ -79,7 +95,7 @@ export default function RoomList() {
           />
         </section>
 
-        {filteredRooms.length === 0 ? (
+        {loading ? <div className="empty-state"><p>Loading showings…</p></div> : loadError ? <div className="empty-state"><p>{loadError}</p></div> : filteredRooms.length === 0 ? (
           <div className="empty-state">
             <h3>No showings match that</h3>
             <p>Try a different filter, or host your own room — the marquee's got room for one more.</p>
