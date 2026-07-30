@@ -22,7 +22,7 @@ export default function RoomList() {
 
   const loadRooms = useCallback(() => {
     getAllLives()
-      .then(({ data }) => setRooms(data))
+      .then(({ response }) => setRooms(response || [] ))
       .catch(() => setLoadError('Unable to load rooms right now.'))
       .finally(() => setLoading(false));
   }, []);

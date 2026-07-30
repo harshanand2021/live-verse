@@ -9,12 +9,13 @@ export default function Signup() {
   const { user, authReady, signup, authLoading, authError } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const ok = await signup(name, email, password);
+    const ok = await signup(name, username, email, password);
     if (ok) navigate('/rooms', { replace: true });
   };
 
@@ -38,6 +39,17 @@ export default function Signup() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               autoComplete="name"
+            />
+          </label>
+
+          <label className="auth-field">
+            <span>Username</span>
+            <input
+              type="text"
+              placeholder="your_handle"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
             />
           </label>
 

@@ -9,15 +9,14 @@ export default function Login() {
   const { user, authReady, login, authLoading, authError } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
-  // Send people back to whatever they were trying to open before being asked to sign in.
   const redirectTo = location.state?.from?.pathname || '/rooms';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const ok = await login(email, password);
+    const ok = await login(username, password);
     if (ok) navigate(redirectTo, { replace: true });
   };
 
@@ -34,13 +33,13 @@ export default function Login() {
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <label className="auth-field">
-            <span>Email</span>
+            <span>Username</span>
             <input
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
+              type="text"
+              placeholder="your_handle"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
             />
           </label>
 

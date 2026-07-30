@@ -1,5 +1,6 @@
 import axios from "axios";
 import mockServer from './mockServer';
+import.meta.env.VITE_API_URL
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/',
