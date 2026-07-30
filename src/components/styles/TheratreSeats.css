@@ -488,3 +488,13 @@
   .seat { width: 19px; height: 19px; font-size: 7.5px; }
   .seat::before { height: 26%; }
 }
+
+/* Flat seat grid — replaces the tiered rows/aisle layout */
+.ts-flat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+  gap: 12px;
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 20px 0;
+}

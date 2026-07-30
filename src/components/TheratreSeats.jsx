@@ -1,137 +1,64 @@
 import { useState } from 'react';
 import './styles/TheratreSeats.css';
 
-// ─── Status config ────────────────────────────────────────────────────────────
+// Decide a seat's visual status from backend fields + current user context.
+function seatStatus(seat, selectedSeatNumber, currentUserId, hostUserId) {
+  if (seat.seatNumber === selectedSeatNumber) return 'you';
+  if (seat.isBooked) {
+    if (seat.bookedByUserId && hostUserId && seat.bookedByUserId === hostUserId) return 'host';
+    return 'occupied';
+  }
+  return 'available';
+}
+
 const STATUS = {
-  available: { cls: 'seat--available', label: 'Available'  },
-  occupied:  { cls: 'seat--occupied',  label: 'Occupied'   },
-  you:       { cls: 'seat--you',       label: 'You'        },
-  host:      { cls: 'seat--host',      label: 'Host'       },
-  sold:      { cls: 'seat--sold',      label: 'Sold'       },
+  available: { cls: 'seat--available', label: 'Available' },
+  occupied:  { cls: 'seat--occupied',  label: 'Occupied'  },
+  you:       { cls: 'seat--you',       label: 'You'       },
+  host:      { cls: 'seat--host',      label: 'Host'      },
 };
 
-// ─── Single seat button ───────────────────────────────────────────────────────
-function Seat({ seat, displayStatus, rowLabel, isClickable, isTalkable, onClick, onHover, isHovered }) {
-  const cfg    = STATUS[displayStatus] || STATUS.available;
-  const seatId = `${rowLabel}${seat.num}`;
+function Seat({ seat, status, isClickable, onClick, onHover, isHovered }) {
+  const cfg = STATUS[status] || STATUS.available;
+  const label = `Seat ${seat.seatNumber}`;
+  const padded = String(seat.seatNumber).padStart(2, '0');
 
   return (
     <button
       type="button"
-      className={`seat ${cfg.cls} ${isTalkable ? 'seat--talkable' : ''} ${isHovered ? 'seat--hovered' : ''}`}
+      className={`seat ${cfg.cls} ${isHovered ? 'seat--hovered' : ''}`}
       disabled={!isClickable}
-      aria-pressed={displayStatus === 'you'}
-      aria-label={`Seat ${seatId}, ${seat.name ? seat.name + ', ' : ''}${cfg.label}${isTalkable ? ' — start private talk' : ''}`}
-      title={isTalkable ? `${seatId} — Talk privately with ${seat.name || 'this viewer'}` : seat.name ? `${seatId} — ${seat.name}` : seatId}
+      aria-pressed={status === 'you'}
+      aria-label={`${label}, ${seat.bookedByName ? seat.bookedByName + ', ' : ''}${cfg.label}`}
+      title={seat.bookedByName ? `Seat ${seat.seatNumber} — ${seat.bookedByName}` : `Seat ${seat.seatNumber}`}
       onClick={() => isClickable && onClick()}
-      onMouseEnter={() => onHover({ seatId, seat: { ...seat, status: displayStatus }, rowLabel })}
+      onMouseEnter={() => onHover({ seatNumber: seat.seatNumber, seat, status })}
       onMouseLeave={() => onHover(null)}
-      onFocus={() => onHover({ seatId, seat: { ...seat, status: displayStatus }, rowLabel })}
+      onFocus={() => onHover({ seatNumber: seat.seatNumber, seat, status })}
       onBlur={() => onHover(null)}
     >
-      <span className="seat__num">{seat.num}</span>
+      <span className="seat__num">{padded}</span>
     </button>
   );
 }
 
-// ─── One section block (e.g. PREMIUM ROW / PREMIER / CLASSIC) ────────────────
-function Section({ section, selectedSeatId, locked, onSelectSeat, onStartTalk, onHover, hoveredId }) {
-  return (
-    <div className="ts-section">
-      {/* Section tier header */}
-      <div className="ts-section__header">
-        <span className="ts-section__line" aria-hidden="true" />
-        <div className="ts-section__label-wrap">
-          <span className="ts-section__tier mono">{section.tier}</span>
-          <span className="ts-section__sub">{section.tierSub}</span>
-        </div>
-        <span className="ts-section__line" aria-hidden="true" />
-      </div>
-
-      {/* Rows */}
-      <div className="ts-rows">
-        {section.rows.map((row, rowIndex) => {
-          const middle = Math.ceil(row.seats.length / 2);
-          const leftBank = row.seats.slice(0, middle);
-          const rightBank = row.seats.slice(middle);
-
-          const renderSeat = seat => {
-            const seatId = `${row.rowLabel}${seat.num}`;
-            const isSelected = seatId === selectedSeatId;
-            const displayStatus = isSelected ? 'you' : seat.status;
-            const isTalkable = Boolean(onStartTalk) && ['occupied', 'host'].includes(seat.status);
-            const isSeatSelectable = !locked && (seat.status === 'available' || isSelected);
-            const isClickable = isSeatSelectable || isTalkable;
-
-            return (
-              <Seat
-                key={seatId}
-                seat={seat}
-                displayStatus={displayStatus}
-                rowLabel={row.rowLabel}
-                isClickable={isClickable}
-                isTalkable={isTalkable}
-                onClick={() => {
-                  if (isTalkable) {
-                    onStartTalk({ ...seat, seatId, status: displayStatus });
-                    return;
-                  }
-                  onSelectSeat(isSelected ? null : seatId);
-                }}
-                onHover={onHover}
-                isHovered={hoveredId === seatId}
-              />
-            );
-          };
-
-          return (
-          <div key={row.rowLabel} className={`ts-row ts-row--${rowIndex + 1}`}>
-            {/* Row letter label */}
-            <span className="ts-row__label mono" aria-label={`Row ${row.rowLabel}`}>
-              {row.rowLabel}
-            </span>
-
-            {/* Seats */}
-            <div className="ts-row__seats">
-              <div className="ts-row__bank ts-row__bank--left">{leftBank.map(renderSeat)}</div>
-              <span className="ts-row__aisle" aria-label="Centre aisle" />
-              <div className="ts-row__bank ts-row__bank--right">{rightBank.map(renderSeat)}</div>
-            </div>
-
-            {/* Mirror label on right side */}
-            <span className="ts-row__label ts-row__label--right mono" aria-hidden="true">
-              {row.rowLabel}
-            </span>
-          </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ─── Legend panel ─────────────────────────────────────────────────────────────
-function Legend({ hovered, selectedSeatId, locked, canStartTalk, sections }) {
+function Legend({ hovered, seats, selectedSeatNumber }) {
   const items = [
     { cls: 'seat--host',      label: 'Host'      },
     { cls: 'seat--you',       label: 'You'       },
     { cls: 'seat--available', label: 'Available' },
     { cls: 'seat--occupied',  label: 'Occupied'  },
-    { cls: 'seat--sold',      label: 'Sold'      },
   ];
 
-  const totalSeats    = sections.flatMap(s => s.rows.flatMap(r => r.seats));
-  const occupiedCount = totalSeats.filter(s => ['occupied', 'host'].includes(s.status)).length
-    + (selectedSeatId ? 1 : 0);
-  const availCount    = totalSeats.filter(s => s.status === 'available').length
-    - (selectedSeatId ? 1 : 0);
+  const bookedCount = seats.filter((s) => s.isBooked).length + (selectedSeatNumber ? 1 : 0);
+  const freeCount = seats.filter((s) => !s.isBooked).length - (selectedSeatNumber ? 1 : 0);
 
   return (
     <aside className="ts-legend">
       <div className="ts-legend__block">
         <h4 className="ts-legend__title">Seat Legend</h4>
         <div className="ts-legend__items">
-          {items.map(item => (
+          {items.map((item) => (
             <div key={item.label} className="ts-legend__item">
               <span className={`ts-legend__swatch seat ${item.cls}`} aria-hidden="true">
                 <span className="seat__num">01</span>
@@ -146,101 +73,92 @@ function Legend({ hovered, selectedSeatId, locked, canStartTalk, sections }) {
         <h4 className="ts-legend__title">Occupancy</h4>
         <div className="ts-legend__stats">
           <div className="ts-legend__stat">
-            <span className="ts-legend__stat-val" style={{ color: 'var(--marquee)' }}>{occupiedCount}</span>
+            <span className="ts-legend__stat-val" style={{ color: 'var(--marquee)' }}>{bookedCount}</span>
             <span className="ts-legend__stat-key">Watching</span>
           </div>
           <div className="ts-legend__stat">
-            <span className="ts-legend__stat-val" style={{ color: 'var(--success)' }}>{availCount}</span>
+            <span className="ts-legend__stat-val" style={{ color: 'var(--success)' }}>{freeCount}</span>
             <span className="ts-legend__stat-key">Free seats</span>
           </div>
         </div>
       </div>
 
-      {/* Hover tooltip */}
       <div className={`ts-legend__hover ${hovered ? 'ts-legend__hover--visible' : ''}`}>
         {hovered ? (
           <>
-            <span className="ts-legend__hover-id mono">{hovered.seatId}</span>
+            <span className="ts-legend__hover-id mono">Seat {hovered.seatNumber}</span>
             <span className="ts-legend__hover-name">
-              {hovered.seat.name || STATUS[hovered.seat.status]?.label || 'Seat'}
-            </span>
-            <span className={`ts-legend__hover-status seat ${STATUS[hovered.seat.status]?.cls}`}>
-              <span className="seat__num">•</span>
+              {hovered.seat.bookedByName || STATUS[hovered.status]?.label || 'Seat'}
             </span>
           </>
         ) : null}
       </div>
 
       <p className="ts-legend__hint mono">
-        {canStartTalk
-          ? 'Select an occupied seat to talk privately'
-          : locked
-          ? 'Hover any seat to see details'
-          : selectedSeatId
-            ? 'Tap your seat again to change it'
-            : 'Tap a green seat to sit there'}
+        {selectedSeatNumber ? 'Tap your seat again to change it' : 'Tap a green seat to sit there'}
       </p>
     </aside>
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
 export default function TheatreSeats({
-  sections = [],
+  sections = [],           // now a FLAT array of seats, kept name for drop-in compatibility
   isFullScreen,
-  selectedSeatId = null,
+  selectedSeatId = null,   // now holds a seat NUMBER
   onSelectSeat = () => {},
-  onStartTalk,
+  onStartTalk,             // kept for API compatibility; private talk disabled in flat mode
   locked = false,
+  currentUserId = null,
+  hostUserId = null,
 }) {
   const [hovered, setHovered] = useState(null);
 
   if (isFullScreen) return null;
 
+  const seats = Array.isArray(sections) ? sections : [];
+  const selectedSeatNumber = selectedSeatId;
+
   return (
     <section className="theatre-seats" aria-label="Virtual theatre seating">
-
-      {/* ── Cinema screen arch at the top ── */}
       <div className="ts-screen-arch" aria-hidden="true">
-        <div className="ts-screen-arch__curtain ts-screen-arch__curtain--left"  />
+        <div className="ts-screen-arch__curtain ts-screen-arch__curtain--left" />
         <div className="ts-screen-arch__curtain ts-screen-arch__curtain--right" />
         <div className="ts-screen-arch__frame">
           <div className="ts-screen-arch__glow" />
-            <span className="ts-screen-arch__label mono">
-            {onStartTalk ? '— SELECT A VIEWER TO START A PRIVATE TALK —' : locked ? '— SCREEN THIS WAY —' : '— PICK YOUR SEAT TO REVEAL THE SCREEN —'}
+          <span className="ts-screen-arch__label mono">
+            {locked ? '— SCREEN THIS WAY —' : '— PICK YOUR SEAT TO REVEAL THE SCREEN —'}
           </span>
         </div>
       </div>
 
-      {/* ── Main area: seat sections + legend ── */}
       <div className="ts-main">
-
-        {/* Seating floor (perspective container) */}
         <div className="ts-floor">
-          {sections.map(section => (
-            <Section
-              key={section.id}
-              section={section}
-              selectedSeatId={selectedSeatId}
-              locked={locked}
-              onSelectSeat={onSelectSeat}
-              onStartTalk={onStartTalk}
-              onHover={setHovered}
-              hoveredId={hovered?.seatId}
-            />
-          ))}
+          <div className="ts-flat-grid">
+            {seats.map((seat) => {
+              const status = seatStatus(seat, selectedSeatNumber, currentUserId, hostUserId);
+              const isSelected = status === 'you';
+              const isClickable = !locked && (!seat.isBooked || isSelected);
+              return (
+                <Seat
+                  key={seat.seatNumber}
+                  seat={seat}
+                  status={status}
+                  isClickable={isClickable}
+                  onClick={() => onSelectSeat(isSelected ? null : seat.seatNumber)}
+                  onHover={setHovered}
+                  isHovered={hovered?.seatNumber === seat.seatNumber}
+                />
+              );
+            })}
+          </div>
         </div>
 
-        {/* Right-side legend panel */}
         <Legend
           hovered={hovered}
-          selectedSeatId={selectedSeatId}
-          locked={locked}
-          canStartTalk={Boolean(onStartTalk)}
-          sections={sections}
+          seats={seats}
+          selectedSeatNumber={selectedSeatNumber}
         />
       </div>
-
     </section>
   );
 }

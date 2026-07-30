@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
+import { getCurrentUser } from "../api/userApi";
 import {
   addComment,
   claimSeat,
@@ -9,7 +10,6 @@ import {
   getLiveSeats,
   setLiveMedia,
 } from "../api/liveApi";
-import { getCurrentUser, getUsers } from "../api/userApi";
 
 import ScreenPlayer from "../components/ScreenPlayer";
 import TheatreSeats from "../components/TheratreSeats";
@@ -48,15 +48,43 @@ export default function WatchRoom() {
   const [hasEntered, setHasEntered] = useState(false);
 
   useEffect(() => {
-    if (!roomId) return;
+  if (!roomId) return;
 
-    const interval = setInterval(async () => {
-      const latestRoom = await getLiveById(roomId);
-      setRoom(latestRoom);
-    }, 5000);
+  const loadRoom = async () => {
+    try {
+      setLoading(true);
+      setLoadError("");
 
-    return () => clearInterval(interval);
-  }, [roomId]);
+      const roomData = await getLiveById(roomId);
+      const seats = await getLiveSeats(roomId);
+      const comments = await getLiveComments(roomId);
+      const currentUserData = await getCurrentUser();
+
+      setRoom(roomData);
+      setSeatSections(seats);
+      setMessages(comments);
+      setCurrentUser(currentUserData);
+      setUsers([]);
+
+      // If this user already booked a seat in this room, restore their
+      // seat and drop them straight into the theatre — no need to re-pick.
+      const mySeat = seats.find(
+        (seat) => seat.isBooked && String(seat.bookedByUserId) === String(currentUserData.id)
+      );
+      if (mySeat) {
+        setSelectedSeatId(mySeat.seatNumber);
+        setHasEntered(true);
+      }
+    } catch (err) {
+      console.error("FAILED REQUEST:", err);
+      setLoadError(err.response?.data?.message || "Unable to load room.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  loadRoom();
+}, [roomId]);
 
   const isHost = room?.hostId === currentUser?.id;
 
@@ -199,12 +227,16 @@ export default function WatchRoom() {
   };
 
   const handleSend = async (text) => {
+  try {
     const message = await addComment(room.id, {
-      text,
+      senderId: currentUser.id,
+      content: text,
     });
-
     setMessages((previous) => [...previous, message]);
-  };
+  } catch (err) {
+    console.error('Failed to send message:', err);
+  }
+};
 
   return (
     <div
@@ -259,6 +291,8 @@ export default function WatchRoom() {
             selectedSeatId={selectedSeatId}
             onSelectSeat={setSelectedSeatId}
             locked={false}
+            currentUserId={currentUser?.id}
+            hostUserId={room?.hostId}
           />
 
           <div className="watch-room__picker-bar">
@@ -305,6 +339,8 @@ export default function WatchRoom() {
               selectedSeatId={selectedSeatId}
               locked
               onStartTalk={setTalkSeat}
+              currentUserId={currentUser?.id}
+              hostUserId={room?.hostId}
             />
 
             {/* Host controls panel — below seats, host only, hidden when fullscreen */}
@@ -356,11 +392,7 @@ export default function WatchRoom() {
             messages={messages}
             onSend={handleSend}
             users={users}
-            totalSeats={
-              seatSections
-                .flatMap((section) => section.seats)
-                .filter((seat) => seat.isOccupied).length
-            }
+            totalSeats={seatSections.filter((seat) => seat.isBooked).length}
             isFullScreen={isFullScreen}
             isOpen={isChatOpen}
           />

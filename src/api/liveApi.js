@@ -54,6 +54,18 @@ function normalizeRoom(backendRoom) {
 };
 }
 
+// Backend seat map → flat array the seat grid renders directly.
+// Backend: { roomId, totalSeats, occupiedSeats, seats: [{ seatNumber, isBooked, bookedByUserId, bookedByDisplayName }] }
+function normalizeSeats(backendSeatMap) {
+  if (!backendSeatMap || !Array.isArray(backendSeatMap.seats)) return [];
+  return backendSeatMap.seats.map((seat) => ({
+    seatNumber: seat.seatNumber,
+    isBooked: seat.isBooked,
+    bookedByUserId: seat.bookedByUserId != null ? String(seat.bookedByUserId) : null,
+    bookedByName: seat.bookedByDisplayName || null,
+  }));
+}
+
 function extractYoutubeId(url) {
 
     if (!url) return null;
@@ -98,15 +110,11 @@ export const endLive = (id) =>
 export const getLiveComments = (id) =>
   api.get(`/api/rooms/${id}/messages/recent?limit=50`).then((res) => unwrap(res));
 
-export const addComment = (id, text) =>
-    api.post(`/api/rooms/${id}/messages`, {
-
-        message: text
-
-    }).then((res) => unwrap(res));
+export const addComment = (id, payload) =>
+  api.post(`/api/rooms/${id}/messages`, payload).then((res) => unwrap(res));
 
 export const getLiveSeats = (id) =>
-  api.get(`/api/rooms/${id}/seats`).then((res) => unwrap(res));
+  api.get(`/api/rooms/${id}/seats`).then((res) => normalizeSeats(unwrap(res)));
 
 export const claimSeat = (id, seatNumber) =>
   api.post(`/api/rooms/${id}/seats/${seatNumber}/book`).then((res) => unwrap(res));

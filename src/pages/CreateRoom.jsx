@@ -71,7 +71,10 @@ export default function CreateRoom() {
 
       console.log("Room Created :", room);
 
-      navigate(`/rooms/${room.id}`, {
+      console.log(room);
+      console.log(room.id);
+
+      navigate(`/room/${room.id}`, {
         replace: true,
 
         state: {

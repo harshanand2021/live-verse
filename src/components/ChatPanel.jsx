@@ -3,20 +3,31 @@ import "./styles/ChatPanel.css";
 
 const reactions = ['❤️', '😂', '😮', '👏', '🔥'];
 
-function findUser(users, userId) {
-  return (
-    users.find((u) => u.id === userId) || {
-      name: "Viewer",
-      avatarColor: "#8A8294",
-    }
-  );
+// Fallback color when we only have a name (backend doesn't store avatar colors).
+// Derive a stable color from the name so the same person always looks the same.
+const AVATAR_COLORS = ['#FF5A3C', '#7C6BFF', '#4ADE80', '#FFD166', '#06D6A0', '#EF476F'];
+function colorForName(name) {
+  const str = String(name || '');
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+// Turn an ISO timestamp into a short HH:MM label.
+function formatTime(timestamp) {
+  if (!timestamp) return '';
+  try {
+    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '';
+  }
 }
 
 export default function ChatPanel({
   id,
-  messages,
+  messages = [],
   onSend,
-  viewerCount,
+  viewerCount = 0,
   isFullScreen,
   isOpen,
   users = [],
@@ -25,7 +36,6 @@ export default function ChatPanel({
   const [tab, setTab] = useState("chat"); // 'chat' | 'viewers'
   const listRef = useRef(null);
 
-  // Auto-scroll to newest message
   useEffect(() => {
     if (listRef.current) {
       listRef.current.scrollTop = listRef.current.scrollHeight;
@@ -63,7 +73,7 @@ export default function ChatPanel({
         </div>
         <span className="chat-panel__count mono">
           <span className="chat-panel__count-dot" aria-hidden="true" />
-          {viewerCount.toLocaleString()}
+          {Number(viewerCount).toLocaleString()}
         </span>
       </div>
 
@@ -77,22 +87,24 @@ export default function ChatPanel({
             aria-label="Chat messages"
           >
             {messages.map((msg) => {
-              const author = findUser(users, msg.userId);
+              // Backend message shape: { messageId, senderId, senderDisplayName, content, timestamp }
+              const name = msg.senderDisplayName || 'Viewer';
+              const time = formatTime(msg.timestamp);
               return (
-                <div key={msg.id} className="chat-msg">
+                <div key={msg.messageId} className="chat-msg">
                   <span
                     className="chat-msg__avatar"
-                    style={{ background: author.avatarColor }}
+                    style={{ background: colorForName(name) }}
                     aria-hidden="true"
                   >
-                    {author.name.charAt(0)}
+                    {name.charAt(0)}
                   </span>
                   <div className="chat-msg__body">
                     <div className="chat-msg__meta">
-                      <span className="chat-msg__name">{author.name}</span>
-                      <span className="chat-msg__time mono">{msg.time}</span>
+                      <span className="chat-msg__name">{name}</span>
+                      <span className="chat-msg__time mono">{time}</span>
                     </div>
-                    <p className="chat-msg__text">{msg.text}</p>
+                    <p className="chat-msg__text">{msg.content}</p>
                   </div>
                 </div>
               );
@@ -131,12 +143,7 @@ export default function ChatPanel({
               disabled={!draft.trim()}
               aria-label="Send message"
             >
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
               </svg>
             </button>
@@ -147,21 +154,24 @@ export default function ChatPanel({
       {/* ── Viewers tab ── */}
       {tab === "viewers" && (
         <div className="chat-panel__viewers">
-          {users.map((u) => (
-            <div key={u.id} className="viewer-row">
-              <span
-                className="viewer-row__avatar"
-                style={{ background: u.avatarColor }}
-              >
-                {u.name.charAt(0)}
-              </span>
-              <div className="viewer-row__info">
-                <span className="viewer-row__name">{u.name}</span>
-                <span className="viewer-row__handle mono">{u.handle}</span>
+          {users.length === 0 ? (
+            <p className="chat-panel__empty mono" style={{ padding: '16px', color: 'var(--mute)' }}>
+              Live viewer list coming soon.
+            </p>
+          ) : (
+            users.map((u) => (
+              <div key={u.id} className="viewer-row">
+                <span className="viewer-row__avatar" style={{ background: u.avatarColor }}>
+                  {u.name.charAt(0)}
+                </span>
+                <div className="viewer-row__info">
+                  <span className="viewer-row__name">{u.name}</span>
+                  <span className="viewer-row__handle mono">{u.handle}</span>
+                </div>
+                <span className="viewer-row__online" aria-label="Online" />
               </div>
-              <span className="viewer-row__online" aria-label="Online" />
-            </div>
-          ))}
+            ))
+          )}
         </div>
       )}
     </aside>
