@@ -1,99 +1,111 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Button from "../components/Button";
-import { CONTENT_TYPES, ROOM_VISIBILITY } from "../constants/live";
+import { useAuth } from "../context/useAuth";
 import { createLive } from "../api/liveApi";
+import Button from "../components/Button";
 import "./styles/CreateRoom.css";
 
-function generateCode() {
-  const words = [
-    "MOON",
-    "REEL",
-    "STAR",
-    "NOIR",
-    "GLOW",
-    "SCENE",
-    "FRAME",
-    "CUE",
-  ];
-  const word = words[Math.floor(Math.random() * words.length)];
-  const num = Math.floor(10 + Math.random() * 89);
-  return `${word}-${num}`;
-}
+const CONTENT_TYPES = [
+  { value: "movie", label: "Movie" },
+  { value: "series", label: "Web Series" },
+  { value: "sports", label: "Sports" },
+];
 
 export default function CreateRoom() {
+  const { user } = useAuth();
   const navigate = useNavigate();
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [joinCode, setJoinCode] = useState('');
-  const [contentType, setContentType] = useState(CONTENT_TYPES.MOVIE);
-  const [visibility, setVisibility] = useState(ROOM_VISIBILITY.PUBLIC);
+  const [contentType, setContentType] = useState("movie");
+  const [visibility, setVisibility] = useState("public");
+  const [scheduleNow, setScheduleNow] = useState(true);
   const [videoUrl, setVideoUrl] = useState("");
   const [totalSeats, setTotalSeats] = useState(50);
-  const [scheduleNow, setScheduleNow] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [creating, setCreating] = useState(false);
 
-  const previewCode =
-    visibility === ROOM_VISIBILITY.PRIVATE ? generateCode() : null;
+  const isVideoContent = true;
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
+    if (submitting) return;
 
-    const payload = {
-      title,
-      description,
-      contentType,
-      visibility,
-      scheduleNow,
-      code: joinCode || null,
-      videoUrl, // NEW
-      totalSeats, // NEW
-    };
     if (!title.trim()) {
-      setError("Give your room a title before you open the doors.");
+      setError("Give your room a name so guests know what they are joining.");
       return;
     }
+    if (!videoUrl.trim()) {
+      const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\//;
+
+      if (!youtubeRegex.test(videoUrl.trim())) {
+        setError("Please enter a valid YouTube URL.");
+
+        return;
+      }
+    }
+    if (!totalSeats || totalSeats < 2 || totalSeats > 100) {
+      setError("Total seats must be between 2 and 100.");
+      return;
+    }
+
     setError("");
-    setCreating(true);
+    setSubmitting(true);
+
+    const payload = {
+      roomName: title.trim(),
+
+      totalSeats: Number(totalSeats),
+
+      contentType: "YOUTUBE",
+
+      videoUrl: videoUrl.trim(),
+
+      interestId: null,
+    };
+
+    console.log("Sending room request", payload);
+
     try {
-      const { data: room } = await createLive({
-        title,
-        description,
-        contentType,
-        visibility,
-        code: previewCode,
-        scheduleNow,
+      const room = await createLive(payload);
+
+      console.log("Room Created :", room);
+
+      navigate(`/rooms/${room.id}`, {
+        replace: true,
+
+        state: {
+          room,
+        },
       });
-      navigate(`/host/${room.id}`, { state: room });
-    } catch (requestError) {
-      setError(
-        requestError.response?.data?.message ||
-          "Unable to create this room. Please try again.",
-      );
+    } catch (err) {
+      const message =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        "Unable to create room.";
     } finally {
-      setCreating(false);
+      setSubmitting(false);
     }
   };
 
   return (
     <div className="create-room-page">
       <div className="container container--narrow">
-        <p className="create-room__eyebrow mono">SET THE SCENE</p>
+        <p className="create-room__eyebrow mono">OPEN A ROOM</p>
         <h1 className="create-room__title">Host a Room</h1>
         <p className="create-room__sub">
-          Configure your showing, pick who can walk in, and you're ready to
-          start the stream.
+          Hi <strong>{user?.name}</strong>, set the stage and open the doors.
         </p>
 
-        <form className="create-room-form" onSubmit={handleSubmit}>
+        <div className="create-room-form">
           <label className="cr-field">
             <span>Room title</span>
             <input
               type="text"
-              placeholder="e.g. Friday Night Horror Double Feature"
+              placeholder="Interstellar — Director's Watch"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              autoComplete="off"
             />
           </label>
 
@@ -102,40 +114,60 @@ export default function CreateRoom() {
               Description <em>(optional)</em>
             </span>
             <textarea
-              placeholder="Tell people what they're walking into..."
+              rows="3"
+              placeholder="Tell your guests what to expect"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              rows={3}
             />
           </label>
 
           <div className="cr-field">
             <span>What are you showing?</span>
             <div className="cr-pill-group">
-              {Object.entries({
-                [CONTENT_TYPES.MOVIE]: "Movie",
-                [CONTENT_TYPES.SERIES]: "Web Series",
-                [CONTENT_TYPES.SPORTS]: "Sports",
-              }).map(([value, label]) => (
+              {CONTENT_TYPES.map((type) => (
                 <button
                   type="button"
-                  key={value}
-                  className={`cr-pill ${contentType === value ? "cr-pill--active" : ""}`}
-                  onClick={() => setContentType(value)}
+                  key={type.value}
+                  className={`cr-pill ${contentType === type.value ? "cr-pill--active" : ""}`}
+                  onClick={() => setContentType(type.value)}
                 >
-                  {label}
+                  {type.label}
                 </button>
               ))}
             </div>
           </div>
+
+          {isVideoContent && (
+            <label className="cr-field">
+              <span>YouTube Video URL</span>
+              <input
+                type="url"
+                placeholder="https://www.youtube.com/watch?v=..."
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
+              />
+            </label>
+          )}
+
+          <label className="cr-field">
+            <span>Total seats</span>
+            <input
+              type="number"
+              min="2"
+              max="100"
+              value={totalSeats}
+              onChange={(e) => setTotalSeats(Number(e.target.value))}
+              className="cr-field__number"
+            />
+          </label>
 
           <div className="cr-field">
             <span>Who can walk in?</span>
             <div className="cr-visibility-group">
               <button
                 type="button"
-                className={`cr-visibility-card ${visibility === ROOM_VISIBILITY.PUBLIC ? "cr-visibility-card--active" : ""}`}
-                onClick={() => setVisibility(ROOM_VISIBILITY.PUBLIC)}
+                className={`cr-visibility-card ${visibility === "public" ? "cr-visibility-card--active" : ""}`}
+                onClick={() => setVisibility("public")}
               >
                 <strong>🌐 Public</strong>
                 <p>
@@ -144,8 +176,8 @@ export default function CreateRoom() {
               </button>
               <button
                 type="button"
-                className={`cr-visibility-card cr-visibility-card--violet ${visibility === ROOM_VISIBILITY.PRIVATE ? "cr-visibility-card--active" : ""}`}
-                onClick={() => setVisibility(ROOM_VISIBILITY.PRIVATE)}
+                className={`cr-visibility-card cr-visibility-card--violet ${visibility === "private" ? "cr-visibility-card--active" : ""}`}
+                onClick={() => setVisibility("private")}
               >
                 <strong>🔒 Private</strong>
                 <p>
@@ -155,32 +187,13 @@ export default function CreateRoom() {
             </div>
           </div>
 
-          {visibility === ROOM_VISIBILITY.PRIVATE ? (
-            <div className="cr-code-preview">
-              <span>Your invite code will be</span>
-              <strong className="mono">{previewCode}</strong>
-            </div>
-          ) : null}
-
-          <div className="cr-field">
-            {/* <span>When does it start?</span> */}
-            <div className="cr-pill-group">
-              <button
-                type="button"
-                className={`cr-pill ${scheduleNow ? "cr-pill--active" : ""}`}
-                onClick={() => setScheduleNow(true)}
-              >
-                Start right now
-              </button>
-              {/* <button
-                type="button"
-                className={`cr-pill ${!scheduleNow ? 'cr-pill--active' : ''}`}
-                onClick={() => setScheduleNow(false)}
-              >
-                Schedule for later
-              </button> */}
-            </div>
-          </div>
+          <button
+            type="button"
+            className={`cr-schedule ${scheduleNow ? "cr-schedule--now" : ""}`}
+            onClick={() => setScheduleNow(!scheduleNow)}
+          >
+            {scheduleNow ? "● Start right now" : "○ Schedule for later"}
+          </button>
 
           {error ? (
             <p className="cr-error" role="alert">
@@ -188,34 +201,15 @@ export default function CreateRoom() {
             </p>
           ) : null}
 
-          {contentType !== "live" && (
-            <label className="host-form-field">
-              <span>YouTube Video URL</span>
-              <input
-                type="url"
-                value={videoUrl}
-                onChange={(e) => setVideoUrl(e.target.value)}
-                placeholder="https://www.youtube.com/watch?v=..."
-                required
-              />
-            </label>
-          )}
-
-          <label className="host-form-field">
-            <span>Total seats</span>
-            <input
-              type="number"
-              min="2"
-              max="50"
-              value={totalSeats}
-              onChange={(e) => setTotalSeats(Number(e.target.value))}
-            />
-          </label>
-
-          <Button type="submit" size="lg" fullWidth loading={creating} onClick={handleSubmit}>
-            {"Open the Doors"}
+          <Button
+            type="button"
+            fullWidth
+            loading={submitting}
+            onClick={handleSubmit}
+          >
+            Open the Doors
           </Button>
-        </form>
+        </div>
       </div>
     </div>
   );

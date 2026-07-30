@@ -14,13 +14,15 @@ function loadYouTubeIframeApi() {
       resolve(window.YT);
     };
 
-    const existingScript = document.querySelector('script[src="https://www.youtube.com/iframe_api"]');
+    const existingScript = document.querySelector(
+      'script[src="https://www.youtube.com/iframe_api"]',
+    );
     if (existingScript) return;
 
-    const script = document.createElement('script');
-    script.src = 'https://www.youtube.com/iframe_api';
+    const script = document.createElement("script");
+    script.src = "https://www.youtube.com/iframe_api";
     script.async = true;
-    script.onerror = () => reject(new Error('YouTube player could not load.'));
+    script.onerror = () => reject(new Error("YouTube player could not load."));
     document.head.appendChild(script);
   });
 
@@ -28,12 +30,20 @@ function loadYouTubeIframeApi() {
 }
 
 const qualityLabels = {
-  auto: 'Auto', small: '240p', medium: '360p', large: '480p', hd720: '720p', hd1080: '1080p', hd1440: '1440p', hd2160: '2160p', highres: 'Highest',
+  auto: "Auto",
+  small: "240p",
+  medium: "360p",
+  large: "480p",
+  hd720: "720p",
+  hd1080: "1080p",
+  hd1440: "1440p",
+  hd2160: "2160p",
+  highres: "Highest",
 };
 
 const formatTime = (seconds = 0) => {
   const total = Math.max(0, Math.floor(seconds));
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 };
 
 export default function ScreenPlayer({
@@ -43,9 +53,9 @@ export default function ScreenPlayer({
   isFullScreen = true,
   animateEntrance = true,
   sharedScreenStream = null,
-  sharedSurface = '',
+  sharedSurface = "",
   isShowEnded = false,
-  youtubeVideoId = '',
+  youtubeVideoId = "",
   onTogglePlay,
   onToggleFullScreen,
 }) {
@@ -57,11 +67,13 @@ export default function ScreenPlayer({
   const [youtubeTime, setYoutubeTime] = useState(0);
   const [youtubeDuration, setYoutubeDuration] = useState(0);
   const [qualityLevels, setQualityLevels] = useState([]);
-  const [selectedQuality, setSelectedQuality] = useState('auto');
-  const [playbackRates, setPlaybackRates] = useState([0.25, 0.5, 1, 1.25, 1.5, 1.75, 2]);
+  const [selectedQuality, setSelectedQuality] = useState("auto");
+  const [playbackRates, setPlaybackRates] = useState([
+    0.25, 0.5, 1, 1.25, 1.5, 1.75, 2,
+  ]);
   const [selectedSpeed, setSelectedSpeed] = useState(1);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [youtubeError, setYoutubeError] = useState('');
+  const [youtubeError, setYoutubeError] = useState("");
 
   useEffect(() => {
     const video = sharedScreenRef.current;
@@ -76,10 +88,11 @@ export default function ScreenPlayer({
   useEffect(() => {
     if (!youtubeVideoId || !youtubeMountRef.current) return undefined;
     let cancelled = false;
-    setYoutubeError('');
+    setYoutubeError("");
     setIsSettingsOpen(false);
     setYoutubeTime(0);
     setYoutubeDuration(0);
+    setIsYouTubePlaying(false);
 
     loadYouTubeIframeApi()
       .then((YT) => {
@@ -87,19 +100,44 @@ export default function ScreenPlayer({
         youtubePlayerRef.current?.destroy?.();
         youtubePlayerRef.current = new YT.Player(youtubeMountRef.current, {
           videoId: youtubeVideoId,
-          playerVars: { autoplay: 1, controls: 0, disablekb: 1, fs: 0, modestbranding: 1, playsinline: 1, rel: 0 },
+          playerVars: {
+            autoplay: 1,
+            controls: 0,
+            disablekb: 1,
+            fs: 0,
+            modestbranding: 1,
+            playsinline: 1,
+            rel: 0,
+          },
           events: {
             onReady: ({ target }) => {
               if (cancelled) return;
               setYoutubeDuration(target.getDuration());
-              setQualityLevels(['auto', ...target.getAvailableQualityLevels().filter((level) => level !== 'auto')]);
-              setSelectedQuality(target.getPlaybackQuality() || 'auto');
+              setQualityLevels([
+                "auto",
+                ...target
+                  .getAvailableQualityLevels()
+                  .filter((level) => level !== "auto"),
+              ]);
+              setSelectedQuality(target.getPlaybackQuality() || "auto");
               setPlaybackRates(target.getAvailablePlaybackRates());
               setSelectedSpeed(target.getPlaybackRate());
-              target.playVideo();
+              if(isHost)
+              {
+                target.playVideo();
+              }
             },
-            onStateChange: ({ data }) => setIsYouTubePlaying(data === YT.PlayerState.PLAYING),
-            onError: () => setYoutubeError('This YouTube video cannot be played in the theatre.'),
+            onStateChange: ({ data }) => {
+              const playing = data === YT.PlayerState.PLAYING;
+
+              setIsYouTubePlaying(playing);
+
+              onTogglePlay?.(playing);
+            },
+            onError: () =>
+              setYoutubeError(
+                "This YouTube video cannot be played in the theatre.",
+              ),
           },
         });
       })
@@ -119,7 +157,7 @@ export default function ScreenPlayer({
       if (!player?.getCurrentTime) return;
       setYoutubeTime(player.getCurrentTime());
       setYoutubeDuration(player.getDuration());
-    }, 500);
+    }, 1000);
     return () => window.clearInterval(timer);
   }, [youtubeVideoId]);
 
@@ -128,8 +166,17 @@ export default function ScreenPlayer({
   const togglePlayback = () => {
     if (!isHost || isShowEnded) return;
     if (hasYouTubeVideo) {
-      if (isYouTubePlaying) youtubePlayerRef.current?.pauseVideo();
-      else youtubePlayerRef.current?.playVideo();
+      if (isYouTubePlaying) {
+        youtubePlayerRef.current?.pauseVideo();
+
+        setIsYouTubePlaying(false);
+      } else {
+        youtubePlayerRef.current?.playVideo();
+
+        setIsYouTubePlaying(true);
+      }
+
+      onTogglePlay?.(!isYouTubePlaying);
       return;
     }
     onTogglePlay();
@@ -138,18 +185,31 @@ export default function ScreenPlayer({
   const seekBy = (seconds) => {
     if (!isHost || !hasYouTubeVideo) return;
     const player = youtubePlayerRef.current;
-    player?.seekTo(Math.max(0, Math.min(player.getDuration(), player.getCurrentTime() + seconds)), true);
+    player?.seekTo(
+      Math.max(
+        0,
+        Math.min(player.getDuration(), player.getCurrentTime() + seconds),
+      ),
+      true,
+    );
+    setYoutubeTime(player.getCurrentTime());
   };
 
   const changeQuality = (quality) => {
-    youtubePlayerRef.current?.setPlaybackQuality(quality === 'auto' ? 'default' : quality);
+    youtubePlayerRef.current?.setPlaybackQuality(
+      quality === "auto" ? "default" : quality,
+    );
+
     setSelectedQuality(quality);
+
+    setIsSettingsOpen(false);
   };
 
   const changeSpeed = (speed) => {
     const rate = Number(speed);
     youtubePlayerRef.current?.setPlaybackRate(rate);
     setSelectedSpeed(rate);
+    setIsSettingsOpen(false);
   };
 
   // When fullscreen button clicked: use browser Fullscreen API if available,
@@ -170,9 +230,11 @@ export default function ScreenPlayer({
     >
       {/* ── Top bar: room label + fullscreen button ── */}
       <div className="screen__topbar">
-        <div className={`screen__live-badge ${isShowEnded ? 'screen__live-badge--ended' : ''}`}>
+        <div
+          className={`screen__live-badge ${isShowEnded ? "screen__live-badge--ended" : ""}`}
+        >
           <span className="screen__live-dot" aria-hidden="true" />
-          <span className="mono">{isShowEnded ? 'ENDED' : 'LIVE'}</span>
+          <span className="mono">{isShowEnded ? "ENDED" : "LIVE"}</span>
         </div>
         <span className="screen__room-title">{room.title}</span>
         <button
@@ -232,15 +294,27 @@ export default function ScreenPlayer({
         <div className="screen__content">
           {isShowEnded ? (
             <div className="screen__ended">
-              <span className="screen__ended-icon" aria-hidden="true">■</span>
+              <span className="screen__ended-icon" aria-hidden="true">
+                ■
+              </span>
               <h3>This showing has ended</h3>
               <p>Thanks for watching together.</p>
             </div>
           ) : sharedScreenStream ? (
             <div className="screen__shared-screen">
-              <video ref={sharedScreenRef} autoPlay playsInline className="screen__shared-video" />
+              <video
+                ref={sharedScreenRef}
+                autoPlay
+                playsInline
+                className="screen__shared-video"
+              />
               <span className="screen__shared-label mono">
-                HOST IS SHARING {sharedSurface === 'browser' ? 'A BROWSER TAB' : sharedSurface === 'window' ? 'A WINDOW' : 'A SCREEN'}
+                HOST IS SHARING{" "}
+                {sharedSurface === "browser"
+                  ? "A BROWSER TAB"
+                  : sharedSurface === "window"
+                    ? "A WINDOW"
+                    : "A SCREEN"}
               </span>
             </div>
           ) : youtubeVideoId ? (
@@ -249,8 +323,13 @@ export default function ScreenPlayer({
                 <div ref={youtubeMountRef} />
               </div>
               {/* Blocks clicks/right-click reaching the embed so playback only responds to our controls bar below. */}
-              <div className="screen__youtube-shield" onContextMenu={(event) => event.preventDefault()} />
-              {youtubeError && <p className="screen__youtube-error mono">{youtubeError}</p>}
+              <div
+                className="screen__youtube-shield"
+                onContextMenu={(event) => event.preventDefault()}
+              />
+              {youtubeError && (
+                <p className="screen__youtube-error mono">{youtubeError}</p>
+              )}
             </div>
           ) : isPlaying ? (
             <div className="screen__playing">
@@ -292,7 +371,13 @@ export default function ScreenPlayer({
             onClick={togglePlayback}
             disabled={!isHost || isShowEnded}
             aria-label={playerIsPlaying ? "Pause" : "Play"}
-            title={!isHost ? "Only the host can control playback" : isShowEnded ? "This showing has ended" : undefined}
+            title={
+              !isHost
+                ? "Only the host can control playback"
+                : isShowEnded
+                  ? "This showing has ended"
+                  : undefined
+            }
           >
             {playerIsPlaying ? (
               /* Pause bars */
@@ -327,7 +412,16 @@ export default function ScreenPlayer({
             aria-label="Rewind 10 seconds"
             title="Back 10 seconds"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <path d="M3 12a9 9 0 1 0 3-6.7" />
               <polyline points="3 4 3 9 8 9" />
             </svg>
@@ -343,7 +437,16 @@ export default function ScreenPlayer({
             aria-label="Forward 10 seconds"
             title="Forward 10 seconds"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <path d="M21 12a9 9 0 1 1-3-6.7" />
               <polyline points="21 4 21 9 16 9" />
             </svg>
@@ -361,8 +464,15 @@ export default function ScreenPlayer({
             onClick={(event) => {
               if (!isHost || !hasYouTubeVideo || !youtubeDuration) return;
               const bounds = event.currentTarget.getBoundingClientRect();
-              const ratio = Math.min(1, Math.max(0, (event.clientX - bounds.left) / bounds.width));
-              youtubePlayerRef.current?.seekTo(ratio * youtubeDuration, true);
+              const ratio = Math.min(
+                1,
+                Math.max(0, (event.clientX - bounds.left) / bounds.width),
+              );
+              const time = ratio * youtubeDuration;
+
+              youtubePlayerRef.current?.seekTo(time, true);
+
+              setYoutubeTime(time);
             }}
           >
             <div
@@ -370,7 +480,9 @@ export default function ScreenPlayer({
               style={{
                 width: hasYouTubeVideo
                   ? `${youtubeDuration ? (youtubeTime / youtubeDuration) * 100 : 0}%`
-                  : isPlaying ? "34%" : "0%",
+                  : isPlaying
+                    ? "34%"
+                    : "0%",
               }}
             />
           </div>
@@ -387,7 +499,7 @@ export default function ScreenPlayer({
           <div className="screen__settings">
             <button
               type="button"
-              className={`screen__ctrl-btn ${isSettingsOpen ? 'screen__ctrl-btn--active' : ''}`}
+              className={`screen__ctrl-btn ${isSettingsOpen ? "screen__ctrl-btn--active" : ""}`}
               onClick={() => setIsSettingsOpen((open) => !open)}
               disabled={!hasYouTubeVideo}
               aria-label="Settings"
@@ -412,13 +524,15 @@ export default function ScreenPlayer({
                 <div className="screen__settings-group">
                   <span className="screen__settings-heading mono">Quality</span>
                   {qualityLevels.length === 0 ? (
-                    <span className="screen__settings-empty">Not available yet</span>
+                    <span className="screen__settings-empty">
+                      Not available yet
+                    </span>
                   ) : (
                     qualityLevels.map((level) => (
                       <button
                         type="button"
                         key={level}
-                        className={`screen__settings-option ${selectedQuality === level ? 'screen__settings-option--active' : ''}`}
+                        className={`screen__settings-option ${selectedQuality === level ? "screen__settings-option--active" : ""}`}
                         onClick={() => changeQuality(level)}
                       >
                         {qualityLabels[level] || level}
@@ -432,10 +546,10 @@ export default function ScreenPlayer({
                     <button
                       type="button"
                       key={rate}
-                      className={`screen__settings-option ${selectedSpeed === rate ? 'screen__settings-option--active' : ''}`}
+                      className={`screen__settings-option ${selectedSpeed === rate ? "screen__settings-option--active" : ""}`}
                       onClick={() => changeSpeed(rate)}
                     >
-                      {rate === 1 ? 'Normal' : `${rate}x`}
+                      {rate === 1 ? "Normal" : `${rate}x`}
                     </button>
                   ))}
                 </div>

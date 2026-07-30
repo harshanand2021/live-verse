@@ -1,16 +1,24 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { addComment, claimSeat, endLive, getLiveById, getLiveComments, getLiveSeats, setLiveMedia } from '../api/liveApi';
-import { getCurrentUser, getUsers } from '../api/userApi';
+import { useState, useEffect, useCallback } from "react";
+import { useParams, Link } from "react-router-dom";
+import {
+  addComment,
+  claimSeat,
+  endLive,
+  getLiveById,
+  getLiveComments,
+  getLiveSeats,
+  setLiveMedia,
+} from "../api/liveApi";
+import { getCurrentUser, getUsers } from "../api/userApi";
 
-import ScreenPlayer   from '../components/ScreenPlayer';
-import TheatreSeats  from '../components/TheratreSeats';
-import ChatPanel      from '../components/ChatPanel';
-import HostControls   from '../components/HostControls';
-import InsideView     from '../components/InsideView';
-import PrivateTalk    from '../components/PrivateTalk';
+import ScreenPlayer from "../components/ScreenPlayer";
+import TheatreSeats from "../components/TheratreSeats";
+import ChatPanel from "../components/ChatPanel";
+import HostControls from "../components/HostControls";
+import InsideView from "../components/InsideView";
+import PrivateTalk from "../components/PrivateTalk";
 
-import './styles/WatchRoom.css';
+import "./styles/WatchRoom.css";
 
 export default function WatchRoom() {
   const { roomId } = useParams();
@@ -19,38 +27,35 @@ export default function WatchRoom() {
   const [users, setUsers] = useState([]);
   const [seatSections, setSeatSections] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
-  const [isPlaying,     setIsPlaying]     = useState(true);
-  const [isFullScreen,  setIsFullScreen]  = useState(false);
-  const [isChatOpen,    setIsChatOpen]    = useState(false);
-  const [talkSeat,      setTalkSeat]      = useState(null);
-  const [animateEntry,  setAnimateEntry]  = useState(false);
-  const [messages,      setMessages]      = useState([]);
+  const [loadError, setLoadError] = useState("");
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [talkSeat, setTalkSeat] = useState(null);
+  const [animateEntry, setAnimateEntry] = useState(false);
+  const [messages, setMessages] = useState([]);
   const [sharedScreenStream, setSharedScreenStream] = useState(null);
-  const [sharedSurface, setSharedSurface] = useState('');
-  const [screenShareError, setScreenShareError] = useState('');
+  const [sharedSurface, setSharedSurface] = useState("");
+  const [screenShareError, setScreenShareError] = useState("");
   const [isEndingShow, setIsEndingShow] = useState(false);
-  const [endShowError, setEndShowError] = useState('');
+  const [endShowError, setEndShowError] = useState("");
   const [isUpdatingMedia, setIsUpdatingMedia] = useState(false);
-  const [mediaError, setMediaError] = useState('');
+  const [mediaError, setMediaError] = useState("");
 
   // Hosts step straight onto their reserved seat; everyone else has to pick
   // one before the screen is revealed — no seat, no show.
   const [selectedSeatId, setSelectedSeatId] = useState(null);
-  const [hasEntered,     setHasEntered]     = useState(false);
+  const [hasEntered, setHasEntered] = useState(false);
 
   useEffect(() => {
-    Promise.all([getLiveById(roomId), getLiveComments(roomId), getLiveSeats(roomId), getCurrentUser(), getUsers()])
-      .then(([roomResponse, messagesResponse, seatsResponse, userResponse, usersResponse]) => {
-        setRoom(roomResponse.data);
-        setMessages(messagesResponse.data);
-        setSeatSections(seatsResponse.data);
-        setCurrentUser(userResponse.data);
-        setUsers(usersResponse.data);
-        setHasEntered(roomResponse.data.hostId === userResponse.data.id);
-      })
-      .catch((error) => setLoadError(error.response?.data?.message || 'Unable to load this room.'))
-      .finally(() => setLoading(false));
+    if (!roomId) return;
+
+    const interval = setInterval(async () => {
+      const latestRoom = await getLiveById(roomId);
+      setRoom(latestRoom);
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, [roomId]);
 
   const isHost = room?.hostId === currentUser?.id;
@@ -60,39 +65,46 @@ export default function WatchRoom() {
       stream?.getTracks().forEach((track) => track.stop());
       return null;
     });
-    setSharedSurface('');
+    setSharedSurface("");
   }, []);
 
-  useEffect(() => () => {
-    sharedScreenStream?.getTracks().forEach((track) => track.stop());
-  }, [sharedScreenStream]);
+  useEffect(
+    () => () => {
+      sharedScreenStream?.getTracks().forEach((track) => track.stop());
+    },
+    [sharedScreenStream],
+  );
 
   const startScreenShare = async ({ preferTab = false } = {}) => {
     if (!isHost) return;
     if (!navigator.mediaDevices?.getDisplayMedia) {
-      setScreenShareError('Screen sharing is not supported by this browser.');
+      setScreenShareError("Screen sharing is not supported by this browser.");
       return;
     }
 
     try {
-      setScreenShareError('');
+      setScreenShareError("");
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: true,
         audio: true,
         preferCurrentTab: preferTab,
-        selfBrowserSurface: 'exclude',
-        surfaceSwitching: 'include',
+        selfBrowserSurface: "exclude",
+        surfaceSwitching: "include",
       });
       const videoTrack = stream.getVideoTracks()[0];
-      setSharedSurface(videoTrack?.getSettings?.().displaySurface || '');
-      videoTrack?.addEventListener('ended', () => {
-        setSharedScreenStream((activeStream) => activeStream === stream ? null : activeStream);
-        setSharedSurface('');
+      setSharedSurface(videoTrack?.getSettings?.().displaySurface || "");
+      videoTrack?.addEventListener("ended", () => {
+        setSharedScreenStream((activeStream) =>
+          activeStream === stream ? null : activeStream,
+        );
+        setSharedSurface("");
       });
       setSharedScreenStream(stream);
     } catch (error) {
-      if (error.name !== 'NotAllowedError') {
-        setScreenShareError('Unable to start screen sharing. Please try again.');
+      if (error.name !== "NotAllowedError") {
+        setScreenShareError(
+          "Unable to start screen sharing. Please try again.",
+        );
       }
     }
   };
@@ -107,17 +119,25 @@ export default function WatchRoom() {
 
   const handleEndShow = async () => {
     if (!isHost || isEndingShow) return;
-    if (!window.confirm('End this showing for everyone? This cannot be undone.')) return;
+    if (
+      !window.confirm("End this showing for everyone? This cannot be undone.")
+    )
+      return;
 
-    setEndShowError('');
+    setEndShowError("");
     setIsEndingShow(true);
     try {
-      const { data: endedRoom } = await endLive(room.id);
+      const endedRoom = await endLive(room.id);
+      setRoom(endedRoom);
       stopScreenShare();
       setIsPlaying(false);
-      setRoom(endedRoom);
+      setMessages([]);
+      setSeatSections([]);
     } catch (error) {
-      setEndShowError(error.response?.data?.message || 'Unable to end the showing. Please try again.');
+      setEndShowError(
+        error.response?.data?.message ||
+          "Unable to end the showing. Please try again.",
+      );
     } finally {
       setIsEndingShow(false);
     }
@@ -127,52 +147,84 @@ export default function WatchRoom() {
     if (!isHost || isUpdatingMedia) return;
     const videoId = getYouTubeVideoId(youtubeUrl);
     if (!videoId) {
-      setMediaError('Enter a valid YouTube video URL.');
+      setMediaError("Enter a valid YouTube video URL.");
       return;
     }
 
-    setMediaError('');
+    setMediaError("");
     setIsUpdatingMedia(true);
     try {
-      const { data: updatedRoom } = await setLiveMedia(room.id, { youtubeVideoId: videoId });
+      const updatedRoom = await setLiveMedia(room.id, {
+        youtubeVideoId: videoId,
+      });
+      setRoom(updatedRoom);
       stopScreenShare();
       setIsPlaying(true);
-      setRoom(updatedRoom);
     } catch (error) {
-      setMediaError(error.response?.data?.message || 'Unable to load this YouTube video.');
+      setMediaError(
+        error.response?.data?.message || "Unable to load this YouTube video.",
+      );
     } finally {
       setIsUpdatingMedia(false);
     }
   };
 
-  if (loading) return <div className="watch-room"><div className="container">Loading room…</div></div>;
-  if (loadError || !room || !currentUser) return <div className="watch-room"><div className="container">{loadError || 'Room not found.'}</div></div>;
+  if (loading)
+    return (
+      <div className="watch-room">
+        <div className="container">Loading room…</div>
+      </div>
+    );
+  if (loadError || !room || !currentUser)
+    return (
+      <div className="watch-room">
+        <div className="container">{loadError || "Room not found."}</div>
+      </div>
+    );
 
   const handleEnterTheatre = async () => {
     if (!selectedSeatId) return;
     try {
       await claimSeat(room.id, selectedSeatId);
+      const updatedSeats = await getLiveSeats(room.id);
+
+      setSeatSections(updatedSeats);
       setAnimateEntry(true);
       setHasEntered(true);
     } catch (error) {
-      setLoadError(error.response?.data?.message || 'Unable to claim that seat.');
+      setLoadError(
+        error.response?.data?.message || "Unable to claim that seat.",
+      );
     }
   };
 
   const handleSend = async (text) => {
-    const { data: message } = await addComment(room.id, { text });
+    const message = await addComment(room.id, {
+      text,
+    });
+
     setMessages((previous) => [...previous, message]);
   };
 
   return (
-    <div className={`watch-room ${isFullScreen ? 'watch-room--fullscreen' : ''}`}>
-
+    <div
+      className={`watch-room ${isFullScreen ? "watch-room--fullscreen" : ""}`}
+    >
       {/* ── Top bar (hidden in fullscreen) ── */}
       {!isFullScreen && (
         <div className="watch-room__topbar container">
           <Link to="/rooms" className="watch-room__back">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6"/>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="15 18 9 12 15 6" />
             </svg>
             Leave Room
           </Link>
@@ -196,7 +248,10 @@ export default function WatchRoom() {
         <div className="watch-room__picker container">
           <div className="watch-room__picker-intro">
             <h3>Choose your seat</h3>
-            <p>Grab any green seat to claim it — the screen unlocks once you're seated.</p>
+            <p>
+              Grab any green seat to claim it — the screen unlocks once you're
+              seated.
+            </p>
           </div>
 
           <TheatreSeats
@@ -208,7 +263,9 @@ export default function WatchRoom() {
 
           <div className="watch-room__picker-bar">
             <span className="watch-room__picker-status mono">
-              {selectedSeatId ? `Seat ${selectedSeatId} selected` : 'No seat selected yet'}
+              {selectedSeatId
+                ? `Seat ${selectedSeatId} selected`
+                : "No seat selected yet"}
             </span>
             <button
               type="button"
@@ -223,7 +280,6 @@ export default function WatchRoom() {
       ) : (
         /* ── Theatre screen with a slide-out chat drawer ── */
         <div className="watch-room__body">
-
           {/* Left column: screen on top, seats below */}
           <div className="watch-room__left">
             <InsideView isFullScreen={isFullScreen}>
@@ -235,10 +291,10 @@ export default function WatchRoom() {
                 animateEntrance={animateEntry}
                 sharedScreenStream={sharedScreenStream}
                 sharedSurface={sharedSurface}
-                isShowEnded={room.status === 'ended'}
+                isShowEnded={room?.status === "ended"}
                 youtubeVideoId={room.youtubeVideoId}
-                onTogglePlay={() => setIsPlaying(p => !p)}
-                onToggleFullScreen={() => setIsFullScreen(p => !p)}
+                onTogglePlay={() => setIsPlaying((p) => !p)}
+                onToggleFullScreen={() => setIsFullScreen((p) => !p)}
               />
             </InsideView>
 
@@ -252,7 +308,7 @@ export default function WatchRoom() {
             />
 
             {/* Host controls panel — below seats, host only, hidden when fullscreen */}
-            {isHost && !isFullScreen && room.status !== 'ended' && (
+            {isHost && !isFullScreen && room.status !== "ended" && (
               <HostControls
                 room={room}
                 users={users}
@@ -273,13 +329,23 @@ export default function WatchRoom() {
 
           <button
             type="button"
-            className={`watch-room__chat-toggle ${isChatOpen ? 'watch-room__chat-toggle--open' : ''}`}
-            onClick={() => setIsChatOpen(open => !open)}
+            className={`watch-room__chat-toggle ${isChatOpen ? "watch-room__chat-toggle--open" : ""}`}
+            onClick={() => setIsChatOpen((open) => !open)}
             aria-controls="room-chat"
             aria-expanded={isChatOpen}
           >
             <span>Chat</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
               <polyline points="9 18 15 12 9 6" />
             </svg>
           </button>
@@ -290,13 +356,22 @@ export default function WatchRoom() {
             messages={messages}
             onSend={handleSend}
             users={users}
-            viewerCount={room.viewerCount || 1}
+            totalSeats={
+              seatSections
+                .flatMap((section) => section.seats)
+                .filter((seat) => seat.isOccupied).length
+            }
             isFullScreen={isFullScreen}
             isOpen={isChatOpen}
           />
 
           {talkSeat && (
-            <PrivateTalk seat={talkSeat} currentUser={currentUser} users={users} onClose={() => setTalkSeat(null)} />
+            <PrivateTalk
+              seat={talkSeat}
+              currentUser={currentUser}
+              users={users}
+              onClose={() => setTalkSeat(null)}
+            />
           )}
         </div>
       )}
@@ -307,13 +382,15 @@ export default function WatchRoom() {
 function getYouTubeVideoId(value) {
   try {
     const url = new URL(value.trim());
-    const hostname = url.hostname.replace(/^www\./, '');
-    const videoId = hostname === 'youtu.be'
-      ? url.pathname.slice(1).split('/')[0]
-      : hostname.endsWith('youtube.com')
-        ? url.searchParams.get('v') || url.pathname.match(/^\/(?:embed|shorts)\/([^/]+)/)?.[1]
-        : null;
-    return /^[\w-]{11}$/.test(videoId || '') ? videoId : null;
+    const hostname = url.hostname.replace(/^www\./, "");
+    const videoId =
+      hostname === "youtu.be"
+        ? url.pathname.slice(1).split("/")[0]
+        : hostname.endsWith("youtube.com")
+          ? url.searchParams.get("v") ||
+            url.pathname.match(/^\/(?:embed|shorts)\/([^/]+)/)?.[1]
+          : null;
+    return /^[\w-]{11}$/.test(videoId || "") ? videoId : null;
   } catch {
     return null;
   }

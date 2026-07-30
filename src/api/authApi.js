@@ -4,7 +4,7 @@ export const login = (credentials) => api.post("/api/auth/login", credentials);
 
 export const register = (userData) => api.post("/api/auth/register", userData);
 
-export const verify = () => api.get("/api/auth/verify");
+export const verify = () => api.get("/api/auth");
 
 // The backend has no logout or refresh endpoints yet.
 // Logout is client-side only — clear the token and redirect.
