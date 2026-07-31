@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getCurrentUser } from "../api/userApi";
 import {
-  addComment,
   claimSeat,
   endLive,
   getLiveById,
@@ -17,8 +16,17 @@ import ChatPanel from "../components/ChatPanel";
 import HostControls from "../components/HostControls";
 import InsideView from "../components/InsideView";
 import PrivateTalk from "../components/PrivateTalk";
-
+import TheaterFlythrough from "../components/TheaterFlythrough";
 import "./styles/WatchRoom.css";
+import { useRoomSocket } from "../api/useRoomSocket";
+
+// Stable avatar color derived from a user id, so the same person always
+// gets the same color in the viewers list.
+const AVATAR_COLORS = ["#FF5A3C", "#7C6BFF", "#4ADE80", "#FFD166", "#06D6A0", "#EF476F"];
+function colorForId(id) {
+  const n = parseInt(id, 10) || 0;
+  return AVATAR_COLORS[n % AVATAR_COLORS.length];
+}
 
 export default function WatchRoom() {
   const { roomId } = useParams();
@@ -41,6 +49,7 @@ export default function WatchRoom() {
   const [endShowError, setEndShowError] = useState("");
   const [isUpdatingMedia, setIsUpdatingMedia] = useState(false);
   const [mediaError, setMediaError] = useState("");
+  const [showFlythrough, setShowFlythrough] = useState(false);
 
   // Hosts step straight onto their reserved seat; everyone else has to pick
   // one before the screen is revealed — no seat, no show.
@@ -48,43 +57,45 @@ export default function WatchRoom() {
   const [hasEntered, setHasEntered] = useState(false);
 
   useEffect(() => {
-  if (!roomId) return;
+    if (!roomId) return;
 
-  const loadRoom = async () => {
-    try {
-      setLoading(true);
-      setLoadError("");
+    const loadRoom = async () => {
+      try {
+        setLoading(true);
+        setLoadError("");
 
-      const roomData = await getLiveById(roomId);
-      const seats = await getLiveSeats(roomId);
-      const comments = await getLiveComments(roomId);
-      const currentUserData = await getCurrentUser();
+        const roomData = await getLiveById(roomId);
+        const seats = await getLiveSeats(roomId);
+        const comments = await getLiveComments(roomId);
+        const currentUserData = await getCurrentUser();
 
-      setRoom(roomData);
-      setSeatSections(seats);
-      setMessages(comments);
-      setCurrentUser(currentUserData);
-      setUsers([]);
+        setRoom(roomData);
+        setSeatSections(seats);
+        setMessages(comments);
+        setCurrentUser(currentUserData);
+        setUsers([]);
 
-      // If this user already booked a seat in this room, restore their
-      // seat and drop them straight into the theatre — no need to re-pick.
-      const mySeat = seats.find(
-        (seat) => seat.isBooked && String(seat.bookedByUserId) === String(currentUserData.id)
-      );
-      if (mySeat) {
-        setSelectedSeatId(mySeat.seatNumber);
-        setHasEntered(true);
+        // If this user already booked a seat in this room, restore their
+        // seat and drop them straight into the theatre — no need to re-pick.
+        const mySeat = seats.find(
+          (seat) =>
+            seat.isBooked &&
+            String(seat.bookedByUserId) === String(currentUserData.id),
+        );
+        if (mySeat) {
+          setSelectedSeatId(mySeat.seatNumber);
+          setHasEntered(true);
+        }
+      } catch (err) {
+        console.error("FAILED REQUEST:", err);
+        setLoadError(err.response?.data?.message || "Unable to load room.");
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("FAILED REQUEST:", err);
-      setLoadError(err.response?.data?.message || "Unable to load room.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  loadRoom();
-}, [roomId]);
+    loadRoom();
+  }, [roomId]);
 
   const isHost = String(room?.hostId) === String(currentUser?.id);
 
@@ -130,9 +141,7 @@ export default function WatchRoom() {
       setSharedScreenStream(stream);
     } catch (error) {
       if (error.name !== "NotAllowedError") {
-        setScreenShareError(
-          "Unable to start screen sharing. Please try again.",
-        );
+        setScreenShareError("Unable to start screen sharing. Please try again.");
       }
     }
   };
@@ -147,9 +156,7 @@ export default function WatchRoom() {
 
   const handleEndShow = async () => {
     if (!isHost || isEndingShow) return;
-    if (
-      !window.confirm("End this showing for everyone? This cannot be undone.")
-    )
+    if (!window.confirm("End this showing for everyone? This cannot be undone."))
       return;
 
     setEndShowError("");
@@ -170,6 +177,77 @@ export default function WatchRoom() {
       setIsEndingShow(false);
     }
   };
+
+  // Parse "User {id} joined" / "User {id} left" and keep the live roster.
+  // Only the current user's real name is known locally; everyone else shows
+  // as "User {id}" (the activity log only carries ids).
+  const applyActivity = useCallback(
+    (message) => {
+      if (typeof message !== "string") return;
+      const joinMatch = message.match(/^User (\d+) joined$/);
+      const leaveMatch = message.match(/^User (\d+) left$/);
+
+      if (joinMatch) {
+        const uid = joinMatch[1];
+        setUsers((prev) => {
+          if (prev.some((u) => String(u.id) === uid)) return prev; // already present
+          const isMe = String(uid) === String(currentUser?.id);
+          return [
+            ...prev,
+            {
+              id: uid,
+              name: isMe ? currentUser?.name || `User ${uid}` : `User ${uid}`,
+              handle: isMe ? currentUser?.handle || `@user${uid}` : `@user${uid}`,
+              avatarColor: colorForId(uid),
+              isMe,
+            },
+          ];
+        });
+      } else if (leaveMatch) {
+        const uid = leaveMatch[1];
+        setUsers((prev) => prev.filter((u) => String(u.id) !== uid));
+      }
+    },
+    [currentUser],
+  );
+
+  const handleSocketEvent = useCallback(
+    (event) => {
+      const { type, payload } = event;
+
+      if (type === "CHAT") {
+        setMessages((prev) => {
+          const isDuplicate = prev.some(
+            (m) =>
+              (payload.messageId != null && m.messageId === payload.messageId) ||
+              (m.messageId == null &&
+                m.content === payload.content &&
+                m.senderId === payload.senderId &&
+                m.timestamp === payload.timestamp),
+          );
+          if (isDuplicate) return prev;
+          return [...prev, payload];
+        });
+      } else if (type === "CHAT_HISTORY") {
+        if (Array.isArray(payload.messages)) {
+          setMessages(payload.messages);
+        }
+      } else if (type === "ACTIVITY_LOG") {
+        applyActivity(payload.message);
+      } else if (type === "ACTIVITY_LOG_HISTORY") {
+        if (Array.isArray(payload.entries)) {
+          payload.entries.forEach((e) => applyActivity(e.message));
+        }
+      }
+    },
+    [applyActivity],
+  );
+
+  const { connected, sendChat } = useRoomSocket({
+    roomId: room?.id,
+    userId: currentUser?.id,
+    onEvent: handleSocketEvent,
+  });
 
   const handlePlayYouTube = async (youtubeUrl) => {
     if (!isHost || isUpdatingMedia) return;
@@ -220,28 +298,22 @@ export default function WatchRoom() {
       setAnimateEntry(true);
       setHasEntered(true);
     } catch (error) {
-      setLoadError(
-        error.response?.data?.message || "Unable to claim that seat.",
-      );
+      setLoadError(error.response?.data?.message || "Unable to claim that seat.");
     }
   };
 
-  const handleSend = async (text) => {
-  try {
-    const message = await addComment(room.id, {
-      senderId: currentUser.id,
-      content: text,
-    });
-    setMessages((previous) => [...previous, message]);
-  } catch (err) {
-    console.error('Failed to send message:', err);
-  }
-};
+  const handleSend = (text) => {
+    // Send over WebSocket only. Quarkus persists it and broadcasts it back to
+    // everyone (including us), and handleSocketEvent appends it when the echo
+    // arrives. Do NOT post via REST or append locally — that causes duplicates.
+    const sent = sendChat(text);
+    if (!sent) {
+      console.warn("Chat socket not connected; message not sent.");
+    }
+  };
 
   return (
-    <div
-      className={`watch-room ${isFullScreen ? "watch-room--fullscreen" : ""}`}
-    >
+    <div className={`watch-room ${isFullScreen ? "watch-room--fullscreen" : ""}`}>
       {/* ── Top bar (hidden in fullscreen) ── */}
       {!isFullScreen && (
         <div className="watch-room__topbar container">
@@ -314,7 +386,15 @@ export default function WatchRoom() {
       ) : (
         /* ── Theatre screen with a slide-out chat drawer ── */
         <div className="watch-room__body">
-          {/* Left column: screen on top, seats below */}
+          {showFlythrough && (
+            <TheaterFlythrough
+              onComplete={() => {
+                setShowFlythrough(false);
+                setHasEntered(true);
+              }}
+            />
+          )}
+
           <div className="watch-room__left">
             <InsideView isFullScreen={isFullScreen}>
               <ScreenPlayer
@@ -392,6 +472,7 @@ export default function WatchRoom() {
             messages={messages}
             onSend={handleSend}
             users={users}
+            viewerCount={users.length}
             totalSeats={seatSections.filter((seat) => seat.isBooked).length}
             isFullScreen={isFullScreen}
             isOpen={isChatOpen}

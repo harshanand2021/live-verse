@@ -4,6 +4,7 @@ import RoomCard from "../components/RoomCard";
 import Button from "../components/Button";
 import { getAllLives, resolveInvite } from "../api/liveApi";
 import "./styles/RoomList.css";
+import { useAuth } from '../context/useAuth';
 
 const FILTERS = [
   { key: "all", label: "All Rooms" },
@@ -21,6 +22,7 @@ export default function RoomList() {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const { user } = useAuth();
 
   const loadRooms = useCallback(() => {
     getAllLives()
@@ -69,14 +71,14 @@ export default function RoomList() {
   };
 
   const filteredRooms = useMemo(() => {
-    return rooms.filter((room) => {
-      if (filter === "public" && room.visibility !== "public") return false;
-      if (filter === "private" && room.visibility !== "private") return false;
-      if (query && !room.title.toLowerCase().includes(query.toLowerCase()))
-        return false;
-      return true;
-    });
-  }, [filter, query, rooms]);
+  return rooms.filter((room) => {
+    // Only show rooms this user hosts — others join via invite code.
+    if (String(room.hostId) !== String(user?.id)) return false;
+    if (query && !room.title.toLowerCase().includes(query.toLowerCase()))
+      return false;
+    return true;
+  });
+}, [query, rooms, user]);
 
   return (
     <div className="room-list-page">
