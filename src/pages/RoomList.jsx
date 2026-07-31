@@ -35,7 +35,9 @@ export default function RoomList() {
     return () => window.clearInterval(refreshInterval);
   }, [loadRooms]);
 
-  const handleJoinByCode = async () => {
+  const handleJoinByCode = async (e) => {
+    alert('handler ran, code = ' + joinCode);
+    if (e && e.preventDefault) e.preventDefault();
     const code = joinCode.trim();
     if (!code) {
       setJoinError("Enter an invite code first.");
@@ -45,15 +47,21 @@ export default function RoomList() {
     setJoining(true);
     try {
       const room = await resolveInvite(code);
-      navigate(`/rooms/${room.id}`);
+      console.log("RESOLVED ROOM:", room);
+      navigate(`/room/${room.id}`);
     } catch (err) {
+      console.log("JOIN FAILED:", err);
       const status = err.response?.status;
       if (status === 404) {
-        setJoinError("No room found for that code. Double-check and try again.");
+        setJoinError(
+          "No room found for that code. Double-check and try again.",
+        );
       } else if (status === 409) {
         setJoinError("That room has already ended.");
       } else {
-        setJoinError(err.response?.data?.message || "Could not join that room.");
+        setJoinError(
+          err.response?.data?.message || "Could not join that room.",
+        );
       }
     } finally {
       setJoining(false);
@@ -97,7 +105,10 @@ export default function RoomList() {
                     if (joinError) setJoinError("");
                   }}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") handleJoinByCode();
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleJoinByCode(e);
+                    }
                   }}
                   className="mono"
                   maxLength={8}
@@ -105,7 +116,7 @@ export default function RoomList() {
                 <Button
                   variant="ghost"
                   size="lg"
-                  onClick={handleJoinByCode}
+                  onClick={(e) => handleJoinByCode(e)}
                   loading={joining}
                 >
                   Join with Code
@@ -121,7 +132,11 @@ export default function RoomList() {
         </section>
 
         <section className="room-controls">
-          <div className="room-filters" role="tablist" aria-label="Filter rooms">
+          <div
+            className="room-filters"
+            role="tablist"
+            aria-label="Filter rooms"
+          >
             {FILTERS.map((f) => (
               <button
                 key={f.key}

@@ -101,13 +101,8 @@ export const getAllLives = () =>
 export const getLiveById = (id) =>
   api.get(`/api/rooms/${id}`).then((res) => normalizeRoom(unwrap(res)));
 
-export const joinLive = (id) =>
-  api.post(`/api/rooms/${id}/join`)
-     .then((res) => normalizeRoom(unwrap(res)));
-
-export const leaveLive = (id) =>
-  api.post(`/api/rooms/${id}/leave`)
-     .then((res) => unwrap(res));
+export const joinLive = (id) => Promise.resolve(null);
+export const leaveLive = (id) => Promise.resolve(null);
 
 export const endLive = (id) =>
   api.patch(`/api/rooms/${id}/end`).then((res) => normalizeRoom(unwrap(res)));

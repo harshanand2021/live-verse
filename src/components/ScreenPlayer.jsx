@@ -74,6 +74,8 @@ export default function ScreenPlayer({
   const [selectedSpeed, setSelectedSpeed] = useState(1);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [youtubeError, setYoutubeError] = useState("");
+  const [volume, setVolume] = useState(100);
+  const [isMuted, setIsMuted] = useState(false);
 
   useEffect(() => {
     const video = sharedScreenRef.current;
@@ -122,8 +124,7 @@ export default function ScreenPlayer({
               setSelectedQuality(target.getPlaybackQuality() || "auto");
               setPlaybackRates(target.getAvailablePlaybackRates());
               setSelectedSpeed(target.getPlaybackRate());
-              if(isHost)
-              {
+              if (isHost) {
                 target.playVideo();
               }
             },
@@ -210,6 +211,36 @@ export default function ScreenPlayer({
     youtubePlayerRef.current?.setPlaybackRate(rate);
     setSelectedSpeed(rate);
     setIsSettingsOpen(false);
+  };
+
+  const changeVolume = (value) => {
+    const v = Number(value);
+    setVolume(v);
+    const player = youtubePlayerRef.current;
+    if (player?.setVolume) {
+      player.setVolume(v);
+      if (v === 0) {
+        player.mute?.();
+        setIsMuted(true);
+      } else {
+        if (isMuted) player.unMute?.();
+        setIsMuted(false);
+      }
+    }
+  };
+
+  const toggleMute = () => {
+    const player = youtubePlayerRef.current;
+    if (!player) return;
+    if (isMuted) {
+      player.unMute?.();
+      player.setVolume?.(volume === 0 ? 50 : volume);
+      if (volume === 0) setVolume(50);
+      setIsMuted(false);
+    } else {
+      player.mute?.();
+      setIsMuted(true);
+    }
   };
 
   // When fullscreen button clicked: use browser Fullscreen API if available,
@@ -402,6 +433,60 @@ export default function ScreenPlayer({
               </svg>
             )}
           </button>
+
+          {/* Volume control */}
+          <div className="screen__volume">
+            <button
+              type="button"
+              className="screen__ctrl-btn"
+              onClick={toggleMute}
+              disabled={!hasYouTubeVideo}
+              aria-label={isMuted ? "Unmute" : "Mute"}
+              title={isMuted ? "Unmute" : "Mute"}
+            >
+              {isMuted || volume === 0 ? (
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                  <line x1="23" y1="9" x2="17" y2="15" />
+                  <line x1="17" y1="9" x2="23" y2="15" />
+                </svg>
+              ) : (
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                </svg>
+              )}
+            </button>
+            <input
+              type="range"
+              className="screen__volume-slider"
+              min="0"
+              max="100"
+              value={isMuted ? 0 : volume}
+              onChange={(e) => changeVolume(e.target.value)}
+              disabled={!hasYouTubeVideo}
+              aria-label="Volume"
+            />
+          </div>
 
           {/* Rewind 10s */}
           <button

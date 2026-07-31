@@ -86,7 +86,7 @@ export default function WatchRoom() {
   loadRoom();
 }, [roomId]);
 
-  const isHost = room?.hostId === currentUser?.id;
+  const isHost = String(room?.hostId) === String(currentUser?.id);
 
   const stopScreenShare = useCallback(() => {
     setSharedScreenStream((stream) => {

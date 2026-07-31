@@ -231,6 +231,16 @@
   overflow: hidden;
 }
 
+.screen-wrap:not(.screen-wrap--fullscreen) .screen__body {
+  aspect-ratio: 16 / 9;
+  min-height: 0;
+}
+
+.screen-wrap:not(.screen-wrap--fullscreen) .screen__content {
+  position: absolute;
+  inset: 0;
+}
+
 .screen__youtube-player {
   position: absolute;
   inset: 0;
