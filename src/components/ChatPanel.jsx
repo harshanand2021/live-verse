@@ -91,7 +91,7 @@ export default function ChatPanel({
                 <div key={msg.messageId} className="chat-msg">
                   <span
                     className="chat-msg__avatar"
-                    style={{ background: colorForName(name) }}
+                    // style={{ background: colorForName(name) }}
                     aria-hidden="true"
                   >
                     {name.charAt(0)}

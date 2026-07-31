@@ -7,7 +7,6 @@ import {
   getLiveById,
   getLiveComments,
   getLiveSeats,
-  setLiveMedia,
 } from "../api/liveApi";
 
 import ScreenPlayer from "../components/ScreenPlayer";
@@ -22,7 +21,14 @@ import { useRoomSocket } from "../api/useRoomSocket";
 
 // Stable avatar color derived from a user id, so the same person always
 // gets the same color in the viewers list.
-const AVATAR_COLORS = ["#FF5A3C", "#7C6BFF", "#4ADE80", "#FFD166", "#06D6A0", "#EF476F"];
+const AVATAR_COLORS = [
+  "#FF5A3C",
+  "#7C6BFF",
+  "#4ADE80",
+  "#FFD166",
+  "#06D6A0",
+  "#EF476F",
+];
 function colorForId(id) {
   const n = parseInt(id, 10) || 0;
   return AVATAR_COLORS[n % AVATAR_COLORS.length];
@@ -47,14 +53,16 @@ export default function WatchRoom() {
   const [screenShareError, setScreenShareError] = useState("");
   const [isEndingShow, setIsEndingShow] = useState(false);
   const [endShowError, setEndShowError] = useState("");
-  const [isUpdatingMedia, setIsUpdatingMedia] = useState(false);
   const [mediaError, setMediaError] = useState("");
   const [showFlythrough, setShowFlythrough] = useState(false);
+  // const directVideoRef = useRef(null);
 
   // Hosts step straight onto their reserved seat; everyone else has to pick
   // one before the screen is revealed — no seat, no show.
   const [selectedSeatId, setSelectedSeatId] = useState(null);
   const [hasEntered, setHasEntered] = useState(false);
+
+  const [localVideo, setLocalVideo] = useState(null);
 
   useEffect(() => {
     if (!roomId) return;
@@ -96,6 +104,28 @@ export default function WatchRoom() {
 
     loadRoom();
   }, [roomId]);
+
+  const handleSetContent = (url, kind) => {
+    const trimmed = url.trim();
+    if (!trimmed) return;
+    if (kind === "youtube") {
+      const videoId = getYouTubeVideoId(trimmed);
+      if (!videoId) {
+        setMediaError("Enter a valid YouTube URL.");
+        return;
+      }
+      setMediaError("");
+      setLocalVideo({ kind: "youtube", url: trimmed, videoId });
+    } else {
+      setMediaError("");
+      setLocalVideo({ kind: "direct", url: trimmed });
+    }
+  };
+
+  const handleClearContent = () => {
+    setMediaError("");
+    setLocalVideo(null);
+  };
 
   const isHost = String(room?.hostId) === String(currentUser?.id);
 
@@ -141,7 +171,9 @@ export default function WatchRoom() {
       setSharedScreenStream(stream);
     } catch (error) {
       if (error.name !== "NotAllowedError") {
-        setScreenShareError("Unable to start screen sharing. Please try again.");
+        setScreenShareError(
+          "Unable to start screen sharing. Please try again.",
+        );
       }
     }
   };
@@ -156,7 +188,9 @@ export default function WatchRoom() {
 
   const handleEndShow = async () => {
     if (!isHost || isEndingShow) return;
-    if (!window.confirm("End this showing for everyone? This cannot be undone."))
+    if (
+      !window.confirm("End this showing for everyone? This cannot be undone.")
+    )
       return;
 
     setEndShowError("");
@@ -197,7 +231,9 @@ export default function WatchRoom() {
             {
               id: uid,
               name: isMe ? currentUser?.name || `User ${uid}` : `User ${uid}`,
-              handle: isMe ? currentUser?.handle || `@user${uid}` : `@user${uid}`,
+              handle: isMe
+                ? currentUser?.handle || `@user${uid}`
+                : `@user${uid}`,
               avatarColor: colorForId(uid),
               isMe,
             },
@@ -219,7 +255,8 @@ export default function WatchRoom() {
         setMessages((prev) => {
           const isDuplicate = prev.some(
             (m) =>
-              (payload.messageId != null && m.messageId === payload.messageId) ||
+              (payload.messageId != null &&
+                m.messageId === payload.messageId) ||
               (m.messageId == null &&
                 m.content === payload.content &&
                 m.senderId === payload.senderId &&
@@ -249,32 +286,6 @@ export default function WatchRoom() {
     onEvent: handleSocketEvent,
   });
 
-  const handlePlayYouTube = async (youtubeUrl) => {
-    if (!isHost || isUpdatingMedia) return;
-    const videoId = getYouTubeVideoId(youtubeUrl);
-    if (!videoId) {
-      setMediaError("Enter a valid YouTube video URL.");
-      return;
-    }
-
-    setMediaError("");
-    setIsUpdatingMedia(true);
-    try {
-      const updatedRoom = await setLiveMedia(room.id, {
-        youtubeVideoId: videoId,
-      });
-      setRoom(updatedRoom);
-      stopScreenShare();
-      setIsPlaying(true);
-    } catch (error) {
-      setMediaError(
-        error.response?.data?.message || "Unable to load this YouTube video.",
-      );
-    } finally {
-      setIsUpdatingMedia(false);
-    }
-  };
-
   if (loading)
     return (
       <div className="watch-room">
@@ -298,7 +309,9 @@ export default function WatchRoom() {
       setAnimateEntry(true);
       setHasEntered(true);
     } catch (error) {
-      setLoadError(error.response?.data?.message || "Unable to claim that seat.");
+      setLoadError(
+        error.response?.data?.message || "Unable to claim that seat.",
+      );
     }
   };
 
@@ -313,7 +326,9 @@ export default function WatchRoom() {
   };
 
   return (
-    <div className={`watch-room ${isFullScreen ? "watch-room--fullscreen" : ""}`}>
+    <div
+      className={`watch-room ${isFullScreen ? "watch-room--fullscreen" : ""}`}
+    >
       {/* ── Top bar (hidden in fullscreen) ── */}
       {!isFullScreen && (
         <div className="watch-room__topbar container">
@@ -409,6 +424,12 @@ export default function WatchRoom() {
                 youtubeVideoId={room.youtubeVideoId}
                 onTogglePlay={() => setIsPlaying((p) => !p)}
                 onToggleFullScreen={() => setIsFullScreen((p) => !p)}
+                localVideo={localVideo}
+                youtubeVideoId={
+                  localVideo?.kind === "youtube"
+                    ? localVideo.videoId
+                    : room.youtubeVideoId
+                }
               />
             </InsideView>
 
@@ -432,10 +453,10 @@ export default function WatchRoom() {
                 screenShareError={screenShareError}
                 onToggleScreenShare={toggleScreenShare}
                 onShareBrowserTab={() => startScreenShare({ preferTab: true })}
-                onPlayYouTube={handlePlayYouTube}
-                isUpdatingMedia={isUpdatingMedia}
+                onSetContent={handleSetContent}
+                onClearContent={handleClearContent}
+                activeContent={localVideo}
                 mediaError={mediaError}
-                youtubeVideoId={room.youtubeVideoId}
                 isEndingShow={isEndingShow}
                 endShowError={endShowError}
                 onEndShow={handleEndShow}

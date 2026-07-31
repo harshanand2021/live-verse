@@ -59,6 +59,15 @@ function normalizeRoom(backendRoom) {
 };
 }
 
+function denormalizeCreateRequest(frontendPayload) {
+  return {
+    roomName: frontendPayload.title,
+    totalSeats: frontendPayload.totalSeats || 50,
+    contentType: "LIVE_STREAM",   // always — host sets actual content in-room
+    // no videoUrl — LIVE_STREAM doesn't require it
+  };
+}
+
 // Backend seat map → flat array the seat grid renders directly.
 // Backend: { roomId, totalSeats, occupiedSeats, seats: [{ seatNumber, isBooked, bookedByUserId, bookedByDisplayName }] }
 function normalizeSeats(backendSeatMap) {
@@ -87,7 +96,7 @@ export const createLive = async (payload) => {
 
     const response = await api.post(
         "/api/rooms",
-        payload
+        denormalizeCreateRequest(payload)
     );
 
     return normalizeRoom(

@@ -20,12 +20,9 @@ export default function CreateRoom() {
   const [contentType, setContentType] = useState("movie");
   const [visibility, setVisibility] = useState("public");
   const [scheduleNow, setScheduleNow] = useState(true);
-  const [videoUrl, setVideoUrl] = useState("");
   const [totalSeats, setTotalSeats] = useState(50);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-
-  const isVideoContent = true;
 
   const handleSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
@@ -34,15 +31,6 @@ export default function CreateRoom() {
     if (!title.trim()) {
       setError("Give your room a name so guests know what they are joining.");
       return;
-    }
-    if (!videoUrl.trim()) {
-      const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\//;
-
-      if (!youtubeRegex.test(videoUrl.trim())) {
-        setError("Please enter a valid YouTube URL.");
-
-        return;
-      }
     }
     if (!totalSeats || totalSeats < 2 || totalSeats > 100) {
       setError("Total seats must be between 2 and 100.");
@@ -53,39 +41,24 @@ export default function CreateRoom() {
     setSubmitting(true);
 
     const payload = {
-      roomName: title.trim(),
-
+      title: title.trim(),
+      description: description.trim(),
+      contentType,
+      visibility,
+      scheduleNow,
+      code: null,
       totalSeats: Number(totalSeats),
-
-      contentType: "YOUTUBE",
-
-      videoUrl: videoUrl.trim(),
-
-      interestId: null,
     };
-
-    console.log("Sending room request", payload);
 
     try {
       const room = await createLive(payload);
-
-      console.log("Room Created :", room);
-
-      console.log(room);
-      console.log(room.id);
-
-      navigate(`/room/${room.id}`, {
-        replace: true,
-
-        state: {
-          room,
-        },
-      });
+      navigate(`/room/${room.id}`, { replace: true });
     } catch (err) {
       const message =
         err.response?.data?.message ||
-        err.response?.data?.error ||
-        "Unable to create room.";
+        "Could not open your room. Please try again.";
+      setError(message);
+      console.error("CreateRoom failed:", err);
     } finally {
       setSubmitting(false);
     }
@@ -93,11 +66,12 @@ export default function CreateRoom() {
 
   return (
     <div className="create-room-page">
-      <div className="container container--narrow">
+      <div className="container--narrow">
         <p className="create-room__eyebrow mono">OPEN A ROOM</p>
         <h1 className="create-room__title">Host a Room</h1>
         <p className="create-room__sub">
           Hi <strong>{user?.name}</strong>, set the stage and open the doors.
+          You'll pick what to play once you're inside.
         </p>
 
         <div className="create-room-form">
@@ -140,18 +114,6 @@ export default function CreateRoom() {
             </div>
           </div>
 
-          {isVideoContent && (
-            <label className="cr-field">
-              <span>YouTube Video URL</span>
-              <input
-                type="url"
-                placeholder="https://www.youtube.com/watch?v=..."
-                value={videoUrl}
-                onChange={(e) => setVideoUrl(e.target.value)}
-              />
-            </label>
-          )}
-
           <label className="cr-field">
             <span>Total seats</span>
             <input
@@ -160,7 +122,6 @@ export default function CreateRoom() {
               max="100"
               value={totalSeats}
               onChange={(e) => setTotalSeats(Number(e.target.value))}
-              className="cr-field__number"
             />
           </label>
 
@@ -173,9 +134,7 @@ export default function CreateRoom() {
                 onClick={() => setVisibility("public")}
               >
                 <strong>🌐 Public</strong>
-                <p>
-                  Listed on the Marquee Board. Anyone can walk in and watch.
-                </p>
+                <p>Listed on the Marquee Board. Anyone can walk in and watch.</p>
               </button>
               <button
                 type="button"
@@ -183,9 +142,7 @@ export default function CreateRoom() {
                 onClick={() => setVisibility("private")}
               >
                 <strong>🔒 Private</strong>
-                <p>
-                  Hidden from the board. Guests need your invite code to enter.
-                </p>
+                <p>Hidden from the board. Guests need your invite code to enter.</p>
               </button>
             </div>
           </div>

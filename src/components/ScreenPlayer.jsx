@@ -56,6 +56,7 @@ export default function ScreenPlayer({
   sharedSurface = "",
   isShowEnded = false,
   youtubeVideoId = "",
+  localVideo = null,
   onTogglePlay,
   onToggleFullScreen,
 }) {
@@ -63,6 +64,7 @@ export default function ScreenPlayer({
   const sharedScreenRef = useRef(null);
   const youtubeMountRef = useRef(null);
   const youtubePlayerRef = useRef(null);
+  const directVideoRef = useRef(null);
   const [isYouTubePlaying, setIsYouTubePlaying] = useState(false);
   const [youtubeTime, setYoutubeTime] = useState(0);
   const [youtubeDuration, setYoutubeDuration] = useState(0);
@@ -347,6 +349,17 @@ export default function ScreenPlayer({
                     ? "A WINDOW"
                     : "A SCREEN"}
               </span>
+            </div>
+          ) : localVideo?.kind === "direct" ? (
+            <div className="screen__direct">
+              <video
+                ref={directVideoRef}
+                src={localVideo.url}
+                controls
+                autoPlay
+                playsInline
+                className="screen__direct-video"
+              />
             </div>
           ) : youtubeVideoId ? (
             <div className="screen__youtube">
