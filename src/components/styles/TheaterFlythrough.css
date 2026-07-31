@@ -1,0 +1,170 @@
+.flythrough {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: #000;
+  perspective: 420px;
+  perspective-origin: 50% 42%;
+  overflow: hidden;
+  transition: opacity 0.4s ease-out;
+}
+
+.flythrough--leaving {
+  opacity: 0;
+}
+
+.flythrough__scene {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  animation: fly-forward 2.4s cubic-bezier(0.45, 0, 0.25, 1) forwards;
+}
+
+/* ── Seat floor planes (tilted flat, at 3 depths for parallax) ── */
+.flythrough__seats {
+  position: absolute;
+  left: 50%;
+  bottom: -5%;
+  width: 260%;
+  height: 900px;
+  transform-origin: bottom center;
+  background-repeat: repeat;
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(124, 107, 255, 0.22) 0 6px,
+      rgba(124, 107, 255, 0.04) 6px 14px,
+      transparent 14px 54px
+    ),
+    repeating-linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0.06) 0 2px,
+      transparent 2px 60px
+    );
+}
+
+.flythrough__seats--back {
+  transform: translateX(-50%) rotateX(74deg) translateZ(-700px);
+  opacity: 0.5;
+}
+.flythrough__seats--mid {
+  transform: translateX(-50%) rotateX(74deg) translateZ(-350px);
+  opacity: 0.75;
+}
+.flythrough__seats--front {
+  transform: translateX(-50%) rotateX(74deg) translateZ(0px);
+  opacity: 1;
+}
+
+/* ── The screen: starts far, upright, centered ── */
+.flythrough__screen {
+  position: absolute;
+  top: 24%;
+  left: 50%;
+  width: 520px;
+  height: 292px;
+  margin-left: -260px;
+  transform: translateZ(-850px);
+  background: linear-gradient(140deg, #1c1226 0%, #050308 100%);
+  border: 2px solid rgba(255, 90, 60, 0.45);
+  border-radius: 6px;
+  box-shadow:
+    0 0 90px rgba(255, 90, 60, 0.35),
+    inset 0 0 60px rgba(124, 107, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flythrough__screen-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 60% 55% at 50% 45%,
+    rgba(255, 90, 60, 0.25),
+    transparent 70%
+  );
+}
+
+.flythrough__screen-label {
+  position: relative;
+  color: rgba(245, 232, 202, 0.9);
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-shadow: 0 0 24px rgba(255, 90, 60, 0.6);
+}
+
+/* ── Side walls for tunnel framing ── */
+.flythrough__wall {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 400px;
+  background: linear-gradient(to right, rgba(10, 6, 16, 0.9), transparent);
+}
+.flythrough__wall--left {
+  left: 0;
+  transform: rotateY(38deg) translateZ(-200px);
+  transform-origin: left center;
+}
+.flythrough__wall--right {
+  right: 0;
+  background: linear-gradient(to left, rgba(10, 6, 16, 0.9), transparent);
+  transform: rotateY(-38deg) translateZ(-200px);
+  transform-origin: right center;
+}
+
+/* ── Camera push ── */
+@keyframes fly-forward {
+  from {
+    transform: translateZ(0px);
+  }
+  to {
+    transform: translateZ(820px);
+  }
+}
+
+/* ── Vignette + caption ── */
+.flythrough__vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 90% 80% at 50% 45%,
+    transparent 55%,
+    rgba(0, 0, 0, 0.85) 100%
+  );
+}
+
+.flythrough__caption {
+  position: absolute;
+  bottom: 8%;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(245, 232, 202, 0.7);
+  font-size: 13px;
+  letter-spacing: 0.28em;
+  animation: caption-fade 2.4s ease-out forwards;
+}
+
+@keyframes caption-fade {
+  0% {
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flythrough {
+    display: none;
+  }
+}
