@@ -3,6 +3,11 @@ import api from "./axios";
 // Unwrap the ApiResponse<T> envelope: { success, data, message, timestamp }
 const unwrap = (response) => response.data.data;
 
+
+export const resolveInvite = (code) =>
+  api.get(`/api/rooms/invite/${encodeURIComponent(code)}`).then((res) => normalizeRoom(unwrap(res)));
+
+
 // Backend room → frontend-shaped room.
 function normalizeRoom(backendRoom) {
   if (!backendRoom) return null;

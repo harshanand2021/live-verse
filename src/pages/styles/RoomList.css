@@ -146,3 +146,9 @@
   .join-code-box { flex-direction: column; width: 100%; }
   .join-code-box input { width: 100%; }
 }
+
+.join-code-error {
+  margin-top: 10px;
+  color: var(--danger, #FF6B6B);
+  font-size: 13px;
+}
