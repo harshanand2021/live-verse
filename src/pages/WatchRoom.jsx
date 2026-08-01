@@ -1,13 +1,14 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getCurrentUser } from "../api/userApi";
 import {
-  addComment,
   claimSeat,
   endLive,
+  extractYoutubeId,
   getLiveById,
   getLiveComments,
   getLiveSeats,
+  setLiveMedia,
 } from "../api/liveApi";
 
 import ScreenPlayer from "../components/ScreenPlayer";
@@ -19,6 +20,7 @@ import PrivateTalk from "../components/PrivateTalk";
 
 import "./styles/WatchRoom.css";
 import { useRoomSocket } from "../api/useRoomSocket";
+import { useScreenShare } from "../api/useScreenShare";
 
 // Stable avatar color derived from a user id, so the same person always
 // gets the same color in the viewers list.
@@ -49,13 +51,9 @@ export default function WatchRoom() {
   const [talkSeat, setTalkSeat] = useState(null);
   const [animateEntry, setAnimateEntry] = useState(false);
   const [messages, setMessages] = useState([]);
-  const [sharedScreenStream, setSharedScreenStream] = useState(null);
-  const [sharedSurface, setSharedSurface] = useState("");
-  const [screenShareError, setScreenShareError] = useState("");
   const [isEndingShow, setIsEndingShow] = useState(false);
   const [endShowError, setEndShowError] = useState("");
   const [mediaError, setMediaError] = useState("");
-  const [showFlythrough, setShowFlythrough] = useState(false);
   // const directVideoRef = useRef(null);
 
   // Hosts step straight onto their reserved seat; everyone else has to pick
@@ -64,6 +62,8 @@ export default function WatchRoom() {
   const [hasEntered, setHasEntered] = useState(false);
 
   const [localVideo, setLocalVideo] = useState(null);
+  // Latest playback position/state broadcast by the host, applied by ScreenPlayer.
+  const [syncState, setSyncState] = useState(null);
 
   useEffect(() => {
   if (!roomId) return;
@@ -104,20 +104,35 @@ export default function WatchRoom() {
     loadRoom();
   }, [roomId]);
 
-  const handleSetContent = (url, kind) => {
+  const handleSetContent = async (url, kind) => {
     const trimmed = url.trim();
     if (!trimmed) return;
-    if (kind === "youtube") {
-      const videoId = getYouTubeVideoId(trimmed);
-      if (!videoId) {
-        setMediaError("Enter a valid YouTube URL.");
-        return;
-      }
-      setMediaError("");
-      setLocalVideo({ kind: "youtube", url: trimmed, videoId });
-    } else {
+
+    if (kind !== "youtube") {
+      // A direct video/stream URL has nowhere to live on the room — the backend
+      // only stores a YouTube link — so this stays a host-only preview.
       setMediaError("");
       setLocalVideo({ kind: "direct", url: trimmed });
+      return;
+    }
+
+    if (!getYouTubeVideoId(trimmed)) {
+      setMediaError("Enter a valid YouTube URL.");
+      return;
+    }
+
+    try {
+      setMediaError("");
+      // Persist it so anyone entering later gets it from the room itself...
+      const updated = await setLiveMedia(room.id, trimmed);
+      setRoom(updated);
+      setLocalVideo(null); // the room now carries the video; no host override
+      // ...and push it to everyone already seated so nobody has to refresh.
+      sendSignal("ROOM_VIDEO_CHANGED", { videoUrl: trimmed });
+    } catch (error) {
+      setMediaError(
+        error.response?.data?.message || "Unable to change the video.",
+      );
     }
   };
 
@@ -128,61 +143,68 @@ export default function WatchRoom() {
 
   const isHost = String(room?.hostId) === String(currentUser?.id);
 
-  const stopScreenShare = useCallback(() => {
-    setSharedScreenStream((stream) => {
-      stream?.getTracks().forEach((track) => track.stop());
-      return null;
-    });
-    setSharedSurface("");
-  }, []);
-
-  useEffect(
-    () => () => {
-      sharedScreenStream?.getTracks().forEach((track) => track.stop());
-    },
-    [sharedScreenStream],
+  // Everyone the host has to open a peer connection to: the room roster minus
+  // the host themselves. Memoised so the offer effect only reacts to real
+  // arrivals and departures.
+  const viewerIds = useMemo(
+    () =>
+      users
+        .map((user) => String(user.id))
+        .filter(
+          (id) => id !== String(room?.hostId) && id !== String(currentUser?.id),
+        ),
+    [users, room?.hostId, currentUser?.id],
   );
 
-  const startScreenShare = async ({ preferTab = false } = {}) => {
-    if (!isHost) return;
-    if (!navigator.mediaDevices?.getDisplayMedia) {
-      setScreenShareError("Screen sharing is not supported by this browser.");
-      return;
-    }
+  // useRoomSocket needs an onEvent that routes signaling into this hook, and
+  // this hook needs the socket's send — a cycle. The ref breaks it: send is
+  // stable, so the wrapper below is safe to hand over before the socket exists.
+  const sendRef = useRef(null);
+  const sendSignal = useCallback(
+    (type, payload) => sendRef.current?.(type, payload),
+    [],
+  );
 
-    try {
-      setScreenShareError("");
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-        audio: true,
-        preferCurrentTab: preferTab,
-        selfBrowserSurface: "exclude",
-        surfaceSwitching: "include",
+  const {
+    localStream,
+    remoteStream,
+    surface: sharedSurface,
+    error: webrtcError,
+    startShare,
+    stopShare,
+    handleSignal,
+    dropPeer,
+  } = useScreenShare({
+    isHost,
+    hostId: room?.hostId,
+    currentUserId: currentUser?.id,
+    viewerIds,
+    send: sendSignal,
+  });
+
+  // The host watches their own capture; everyone else watches what arrives
+  // over the peer connection.
+  const sharedScreenStream = isHost ? localStream : remoteStream;
+
+  // Host tells the room what they just did. The backend persists the position
+  // (so late joiners land in the right place) and echoes it to everyone.
+  const handleHostPlaybackAction = useCallback(
+    (action, positionSeconds, isPlaying) => {
+      sendSignal(`YOUTUBE_${action}`, {
+        action,
+        positionSeconds: Math.max(0, Math.round(positionSeconds || 0)),
+        isPlaying,
       });
-      const videoTrack = stream.getVideoTracks()[0];
-      setSharedSurface(videoTrack?.getSettings?.().displaySurface || "");
-      videoTrack?.addEventListener("ended", () => {
-        setSharedScreenStream((activeStream) =>
-          activeStream === stream ? null : activeStream,
-        );
-        setSharedSurface("");
-      });
-      setSharedScreenStream(stream);
-    } catch (error) {
-      if (error.name !== "NotAllowedError") {
-        setScreenShareError(
-          "Unable to start screen sharing. Please try again.",
-        );
-      }
-    }
-  };
+    },
+    [sendSignal],
+  );
 
   const toggleScreenShare = () => {
-    if (sharedScreenStream) {
-      stopScreenShare();
+    if (localStream) {
+      stopShare();
       return;
     }
-    startScreenShare();
+    startShare();
   };
 
   const handleEndShow = async () => {
@@ -200,7 +222,7 @@ export default function WatchRoom() {
     try {
       const endedRoom = await endLive(room.id);
       setRoom(endedRoom);
-      stopScreenShare();
+      stopShare();
       setIsPlaying(false);
       setMessages([]);
       setSeatSections([]);
@@ -277,16 +299,58 @@ export default function WatchRoom() {
         if (Array.isArray(payload.entries)) {
           payload.entries.forEach((e) => applyActivity(e.message));
         }
+      } else if (
+        type === "YOUTUBE_SYNC_STATE" ||
+        type === "YOUTUBE_PLAY" ||
+        type === "YOUTUBE_PAUSE" ||
+        type === "YOUTUBE_SEEK"
+      ) {
+        // YOUTUBE_SYNC_STATE is the one-off snapshot sent just to us on join;
+        // the other three are the host acting live. receivedAt keeps the object
+        // identity fresh so repeating the same position still re-applies.
+        setSyncState({
+          isPlaying: payload.isPlaying,
+          positionSeconds: payload.positionSeconds,
+          updatedAt: payload.updatedAt,
+          isSnapshot: type === "YOUTUBE_SYNC_STATE",
+          receivedAt: Date.now(),
+        });
+      } else if (type === "ROOM_VIDEO_CHANGED") {
+        // Host switched what's playing — swap it in where we sit, no refresh.
+        setRoom((prev) =>
+          prev
+            ? {
+                ...prev,
+                videoUrl: payload.videoUrl,
+                youtubeVideoId: extractYoutubeId(payload.videoUrl),
+              }
+            : prev,
+        );
+        setLocalVideo(null);
+      } else if (type.startsWith("WEBRTC_")) {
+        handleSignal(type, payload);
+      } else if (type === "ERROR") {
+        // The relay rejects a signal aimed at someone who has already gone;
+        // drop that peer so we stop trying to reach them.
+        const goneUserId = payload?.message?.match(
+          /No active session for user (\d+)/,
+        )?.[1];
+        if (goneUserId) dropPeer(goneUserId);
+        else console.warn("Room socket error:", payload?.message);
       }
     },
-    [applyActivity],
+    [applyActivity, handleSignal, dropPeer],
   );
 
-  const { connected, sendChat } = useRoomSocket({
+  const { send, sendChat } = useRoomSocket({
     roomId: room?.id,
     userId: currentUser?.id,
     onEvent: handleSocketEvent,
   });
+
+  useEffect(() => {
+    sendRef.current = send;
+  }, [send]);
 
   if (loading)
     return (
@@ -314,28 +378,21 @@ export default function WatchRoom() {
       setLoadError(
         error.response?.data?.message || "Unable to claim that seat.",
       );
-      setLoadError(
-        error.response?.data?.message || "Unable to claim that seat.",
-      );
     }
   };
 
-  const handleSend = async (text) => {
-  try {
-    const message = await addComment(room.id, {
-      senderId: currentUser.id,
-      content: text,
-    });
-    setMessages((previous) => [...previous, message]);
-  } catch (err) {
-    console.error('Failed to send message:', err);
-  }
-};
+  const handleSend = (text) => {
+    // Send over WebSocket only. Quarkus persists it and broadcasts it back to
+    // everyone (including us), and handleSocketEvent appends it when the echo
+    // arrives. Do NOT post via REST or append locally — a REST write never
+    // reaches the other clients, and appending here double-posts our own copy.
+    const sent = sendChat(text);
+    if (!sent) {
+      console.warn("Chat socket not connected; message not sent.");
+    }
+  };
 
   return (
-    <div
-      className={`watch-room ${isFullScreen ? "watch-room--fullscreen" : ""}`}
-    >
     <div
       className={`watch-room ${isFullScreen ? "watch-room--fullscreen" : ""}`}
     >
@@ -423,10 +480,13 @@ export default function WatchRoom() {
                 sharedScreenStream={sharedScreenStream}
                 sharedSurface={sharedSurface}
                 isShowEnded={room?.status === "ended"}
-                youtubeVideoId={room.youtubeVideoId}
+                syncState={syncState}
+                onHostAction={handleHostPlaybackAction}
                 onTogglePlay={() => setIsPlaying((p) => !p)}
                 onToggleFullScreen={() => setIsFullScreen((p) => !p)}
                 localVideo={localVideo}
+                // The room's own video is what every seated viewer sees; a host
+                // preview loaded in-room only overrides it on the host's screen.
                 youtubeVideoId={
                   localVideo?.kind === "youtube"
                     ? localVideo.videoId
@@ -452,9 +512,9 @@ export default function WatchRoom() {
                 room={room}
                 users={users}
                 isScreenSharing={Boolean(sharedScreenStream)}
-                screenShareError={screenShareError}
+                screenShareError={webrtcError}
                 onToggleScreenShare={toggleScreenShare}
-                onShareBrowserTab={() => startScreenShare({ preferTab: true })}
+                onShareBrowserTab={() => startShare({ preferTab: true })}
                 onSetContent={handleSetContent}
                 onClearContent={handleClearContent}
                 activeContent={localVideo}

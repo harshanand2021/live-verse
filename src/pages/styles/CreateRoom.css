@@ -50,6 +50,14 @@
   font-weight: 400;
 }
 
+.cr-hint {
+  margin-top: -2px;
+  font-size: 12px;
+  line-height: 1.5;
+  font-style: normal;
+  color: var(--mute);
+}
+
 .cr-field input[type="text"],
 .cr-field textarea {
   background: var(--ink-raised);

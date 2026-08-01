@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
-import { createLive } from "../api/liveApi";
+import { createLive, extractYoutubeId } from "../api/liveApi";
 import Button from "../components/Button";
 import "./styles/CreateRoom.css";
 
@@ -21,6 +21,7 @@ export default function CreateRoom() {
   const [visibility, setVisibility] = useState("public");
   const [scheduleNow, setScheduleNow] = useState(true);
   const [totalSeats, setTotalSeats] = useState(50);
+  const [videoUrl, setVideoUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -36,6 +37,12 @@ export default function CreateRoom() {
       setError("Total seats must be between 2 and 100.");
       return;
     }
+    // The URL can only be set here — the backend has no way to change a room's
+    // video afterwards — so reject a bad one now rather than open a dead room.
+    if (videoUrl.trim() && !extractYoutubeId(videoUrl.trim())) {
+      setError("That doesn't look like a YouTube link. Check the URL.");
+      return;
+    }
 
     setError("");
     setSubmitting(true);
@@ -48,6 +55,7 @@ export default function CreateRoom() {
       scheduleNow,
       code: null,
       totalSeats: Number(totalSeats),
+      videoUrl: videoUrl.trim(),
     };
 
     try {
@@ -71,7 +79,7 @@ export default function CreateRoom() {
         <h1 className="create-room__title">Host a Room</h1>
         <p className="create-room__sub">
           Hi <strong>{user?.name}</strong>, set the stage and open the doors.
-          You'll pick what to play once you're inside.
+          Drop in a YouTube link and it plays for everyone who sits down.
         </p>
 
         <div className="create-room-form">
@@ -113,6 +121,23 @@ export default function CreateRoom() {
               ))}
             </div>
           </div>
+
+          <label className="cr-field">
+            <span>
+              YouTube link <em>(optional)</em>
+            </span>
+            <input
+              type="url"
+              placeholder="https://youtube.com/watch?v=..."
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
+              autoComplete="off"
+            />
+            <em className="cr-hint">
+              Everyone who takes a seat sees this on the screen. It can't be
+              changed after the room opens.
+            </em>
+          </label>
 
           <label className="cr-field">
             <span>Total seats</span>

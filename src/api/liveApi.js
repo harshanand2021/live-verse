@@ -59,12 +59,17 @@ function normalizeRoom(backendRoom) {
 };
 }
 
+// The backend only accepts videoUrl at creation time: RoomService rejects a
+// videoUrl on LIVE_STREAM rooms and exposes no update path, so whatever the room
+// plays has to be decided here. A room opened without a URL stays LIVE_STREAM.
 function denormalizeCreateRequest(frontendPayload) {
+  const videoUrl = frontendPayload.videoUrl?.trim();
   return {
     roomName: frontendPayload.title,
     totalSeats: frontendPayload.totalSeats || 50,
-    contentType: "LIVE_STREAM",   // always — host sets actual content in-room
-    // no videoUrl — LIVE_STREAM doesn't require it
+    ...(videoUrl
+      ? { contentType: "YOUTUBE", videoUrl }
+      : { contentType: "LIVE_STREAM" }),
   };
 }
 
@@ -80,12 +85,12 @@ function normalizeSeats(backendSeatMap) {
   }));
 }
 
-function extractYoutubeId(url) {
+export function extractYoutubeId(url) {
 
     if (!url) return null;
 
     const regex =
-        /^.*(?:youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]{11}).*/;
+        /^.*(?:youtu\.be\/|v\/|u\/\w\/|embed\/|shorts\/|watch\?v=|&v=)([^#&?]{11}).*/;
 
     const match = url.match(regex);
 
@@ -128,8 +133,13 @@ export const getLiveSeats = (id) =>
 export const claimSeat = (id, seatNumber) =>
   api.post(`/api/rooms/${id}/seats/${seatNumber}/book`).then((res) => unwrap(res));
 
-export const setLiveMedia = () =>
-    Promise.resolve();
+// Host changes what the room is playing, mid-session. Persists it against the
+// room so anyone entering later gets it; pushing it to people already seated is
+// a separate ROOM_VIDEO_CHANGED broadcast over the socket.
+export const setLiveMedia = (id, videoUrl) =>
+    api
+        .patch(`/api/rooms/${id}/video`, { videoUrl })
+        .then((res) => normalizeRoom(unwrap(res)));
 
 export const getRoomCode = (room) =>
     room?.code ?? "";

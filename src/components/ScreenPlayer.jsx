@@ -46,6 +46,30 @@ const formatTime = (seconds = 0) => {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 };
 
+// How far a viewer may drift before we yank them back. Seeking is visibly
+// disruptive, so tolerate small gaps rather than correcting constantly.
+const SYNC_TOLERANCE_SECONDS = 2;
+
+// Bring a player in line with the host's last known position. `updatedAt` lets
+// us add the time that has passed since the host sent it, so someone joining
+// mid-video lands where the room actually is, not where it was when the host
+// last touched the controls.
+function applySyncState(player, sync) {
+  if (!player?.seekTo || !sync) return;
+
+  const elapsed =
+    sync.isPlaying && sync.updatedAt
+      ? Math.max(0, (Date.now() - new Date(sync.updatedAt).getTime()) / 1000)
+      : 0;
+  const target = Math.max(0, (sync.positionSeconds || 0) + elapsed);
+
+  if (Math.abs((player.getCurrentTime?.() ?? 0) - target) > SYNC_TOLERANCE_SECONDS) {
+    player.seekTo(target, true);
+  }
+  if (sync.isPlaying) player.playVideo?.();
+  else player.pauseVideo?.();
+}
+
 export default function ScreenPlayer({
   room,
   isHost,
@@ -57,6 +81,8 @@ export default function ScreenPlayer({
   isShowEnded = false,
   youtubeVideoId = "",
   localVideo = null,
+  syncState = null,
+  onHostAction,
   onTogglePlay,
   onToggleFullScreen,
 }) {
@@ -78,6 +104,20 @@ export default function ScreenPlayer({
   const [youtubeError, setYoutubeError] = useState("");
   const [volume, setVolume] = useState(100);
   const [isMuted, setIsMuted] = useState(false);
+
+  // The host's state usually arrives over the socket before the YouTube player
+  // has finished loading, so hold onto it and apply it once the player is ready.
+  const syncStateRef = useRef(null);
+  useEffect(() => {
+    syncStateRef.current = syncState;
+  }, [syncState]);
+
+  // Read inside onReady, which is created once per video and would otherwise
+  // capture whatever isHost was at mount.
+  const isHostRef = useRef(isHost);
+  useEffect(() => {
+    isHostRef.current = isHost;
+  }, [isHost]);
 
   useEffect(() => {
     const video = sharedScreenRef.current;
@@ -126,9 +166,31 @@ export default function ScreenPlayer({
               setSelectedQuality(target.getPlaybackQuality() || "auto");
               setPlaybackRates(target.getAvailablePlaybackRates());
               setSelectedSpeed(target.getPlaybackRate());
-              if (isHost) {
-                target.playVideo();
+
+              // Everyone starts the video, not just the host — viewers have no
+              // way to press play themselves (the button is host-only and the
+              // shield swallows clicks on the embed). Browsers block unmuted
+              // autoplay, so if it hasn't started shortly, retry muted and let
+              // the viewer unmute with the volume control.
+              const pending = syncStateRef.current;
+              if (pending && (!isHostRef.current || pending.isSnapshot)) {
+                // Joined into a room that is already playing — land where the
+                // room is rather than starting from the beginning.
+                applySyncState(target, pending);
               }
+              target.playVideo();
+              window.setTimeout(() => {
+                if (cancelled) return;
+                const state = target.getPlayerState?.();
+                const started =
+                  state === YT.PlayerState.PLAYING ||
+                  state === YT.PlayerState.BUFFERING;
+                if (!started) {
+                  target.mute?.();
+                  setIsMuted(true);
+                  target.playVideo();
+                }
+              }, 800);
             },
             onStateChange: ({ data }) => {
               const playing = data === YT.PlayerState.PLAYING;
@@ -164,38 +226,52 @@ export default function ScreenPlayer({
     return () => window.clearInterval(timer);
   }, [youtubeVideoId]);
 
+  // Follow the host. The host ignores these — they are the source of truth, and
+  // applying their own echo would fight their controls — except for the
+  // snapshot sent on join, which lets a host who reloaded rejoin the room's
+  // current position instead of dragging everyone back to the start.
+  useEffect(() => {
+    if (!youtubeVideoId || !syncState) return;
+    if (isHost && !syncState.isSnapshot) return;
+    applySyncState(youtubePlayerRef.current, syncState);
+  }, [syncState, isHost, youtubeVideoId]);
+
   const hasYouTubeVideo = Boolean(youtubeVideoId);
   const playerIsPlaying = hasYouTubeVideo ? isYouTubePlaying : isPlaying;
   const togglePlayback = () => {
     if (!isHost || isShowEnded) return;
     if (hasYouTubeVideo) {
-      if (isYouTubePlaying) {
-        youtubePlayerRef.current?.pauseVideo();
+      const player = youtubePlayerRef.current;
+      const nowPlaying = !isYouTubePlaying;
 
-        setIsYouTubePlaying(false);
-      } else {
-        youtubePlayerRef.current?.playVideo();
+      if (isYouTubePlaying) player?.pauseVideo();
+      else player?.playVideo();
+      setIsYouTubePlaying(nowPlaying);
 
-        setIsYouTubePlaying(true);
-      }
-
-      onTogglePlay?.(!isYouTubePlaying);
+      onHostAction?.(
+        nowPlaying ? "PLAY" : "PAUSE",
+        player?.getCurrentTime?.() ?? 0,
+        nowPlaying,
+      );
+      onTogglePlay?.(nowPlaying);
       return;
     }
     onTogglePlay();
   };
 
+  const seekTo = (seconds) => {
+    const player = youtubePlayerRef.current;
+    if (!player) return;
+    const target = Math.max(0, Math.min(player.getDuration(), seconds));
+
+    player.seekTo(target, true);
+    setYoutubeTime(target);
+    onHostAction?.("SEEK", target, isYouTubePlaying);
+  };
+
   const seekBy = (seconds) => {
     if (!isHost || !hasYouTubeVideo) return;
-    const player = youtubePlayerRef.current;
-    player?.seekTo(
-      Math.max(
-        0,
-        Math.min(player.getDuration(), player.getCurrentTime() + seconds),
-      ),
-      true,
-    );
-    setYoutubeTime(player.getCurrentTime());
+    seekTo((youtubePlayerRef.current?.getCurrentTime?.() ?? 0) + seconds);
   };
 
   const changeQuality = (quality) => {
@@ -566,11 +642,7 @@ export default function ScreenPlayer({
                 1,
                 Math.max(0, (event.clientX - bounds.left) / bounds.width),
               );
-              const time = ratio * youtubeDuration;
-
-              youtubePlayerRef.current?.seekTo(time, true);
-
-              setYoutubeTime(time);
+              seekTo(ratio * youtubeDuration);
             }}
           >
             <div
