@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getCurrentUser } from "../api/userApi";
 import {
+  addComment,
   claimSeat,
   endLive,
   getLiveById,
@@ -15,7 +16,7 @@ import ChatPanel from "../components/ChatPanel";
 import HostControls from "../components/HostControls";
 import InsideView from "../components/InsideView";
 import PrivateTalk from "../components/PrivateTalk";
-import TheaterFlythrough from "../components/TheaterFlythrough";
+
 import "./styles/WatchRoom.css";
 import { useRoomSocket } from "../api/useRoomSocket";
 
@@ -65,42 +66,40 @@ export default function WatchRoom() {
   const [localVideo, setLocalVideo] = useState(null);
 
   useEffect(() => {
-    if (!roomId) return;
+  if (!roomId) return;
 
-    const loadRoom = async () => {
-      try {
-        setLoading(true);
-        setLoadError("");
+  const loadRoom = async () => {
+    try {
+      setLoading(true);
+      setLoadError("");
 
-        const roomData = await getLiveById(roomId);
-        const seats = await getLiveSeats(roomId);
-        const comments = await getLiveComments(roomId);
-        const currentUserData = await getCurrentUser();
+      const roomData = await getLiveById(roomId);
+      const seats = await getLiveSeats(roomId);
+      const comments = await getLiveComments(roomId);
+      const currentUserData = await getCurrentUser();
 
-        setRoom(roomData);
-        setSeatSections(seats);
-        setMessages(comments);
-        setCurrentUser(currentUserData);
-        setUsers([]);
+      setRoom(roomData);
+      setSeatSections(seats);
+      setMessages(comments);
+      setCurrentUser(currentUserData);
+      setUsers([]);
 
-        // If this user already booked a seat in this room, restore their
-        // seat and drop them straight into the theatre — no need to re-pick.
-        const mySeat = seats.find(
-          (seat) =>
-            seat.isBooked &&
-            String(seat.bookedByUserId) === String(currentUserData.id),
-        );
-        if (mySeat) {
-          setSelectedSeatId(mySeat.seatNumber);
-          setHasEntered(true);
-        }
-      } catch (err) {
-        console.error("FAILED REQUEST:", err);
-        setLoadError(err.response?.data?.message || "Unable to load room.");
-      } finally {
-        setLoading(false);
+      // If this user already booked a seat in this room, restore their
+      // seat and drop them straight into the theatre — no need to re-pick.
+      const mySeat = seats.find(
+        (seat) => seat.isBooked && String(seat.bookedByUserId) === String(currentUserData.id)
+      );
+      if (mySeat) {
+        setSelectedSeatId(mySeat.seatNumber);
+        setHasEntered(true);
       }
-    };
+    } catch (err) {
+      console.error("FAILED REQUEST:", err);
+      setLoadError(err.response?.data?.message || "Unable to load room.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
     loadRoom();
   }, [roomId]);
@@ -188,6 +187,9 @@ export default function WatchRoom() {
 
   const handleEndShow = async () => {
     if (!isHost || isEndingShow) return;
+    if (
+      !window.confirm("End this showing for everyone? This cannot be undone.")
+    )
     if (
       !window.confirm("End this showing for everyone? This cannot be undone.")
     )
@@ -312,20 +314,28 @@ export default function WatchRoom() {
       setLoadError(
         error.response?.data?.message || "Unable to claim that seat.",
       );
+      setLoadError(
+        error.response?.data?.message || "Unable to claim that seat.",
+      );
     }
   };
 
-  const handleSend = (text) => {
-    // Send over WebSocket only. Quarkus persists it and broadcasts it back to
-    // everyone (including us), and handleSocketEvent appends it when the echo
-    // arrives. Do NOT post via REST or append locally — that causes duplicates.
-    const sent = sendChat(text);
-    if (!sent) {
-      console.warn("Chat socket not connected; message not sent.");
-    }
-  };
+  const handleSend = async (text) => {
+  try {
+    const message = await addComment(room.id, {
+      senderId: currentUser.id,
+      content: text,
+    });
+    setMessages((previous) => [...previous, message]);
+  } catch (err) {
+    console.error('Failed to send message:', err);
+  }
+};
 
   return (
+    <div
+      className={`watch-room ${isFullScreen ? "watch-room--fullscreen" : ""}`}
+    >
     <div
       className={`watch-room ${isFullScreen ? "watch-room--fullscreen" : ""}`}
     >
@@ -401,15 +411,7 @@ export default function WatchRoom() {
       ) : (
         /* ── Theatre screen with a slide-out chat drawer ── */
         <div className="watch-room__body">
-          {showFlythrough && (
-            <TheaterFlythrough
-              onComplete={() => {
-                setShowFlythrough(false);
-                setHasEntered(true);
-              }}
-            />
-          )}
-
+          {/* Left column: screen on top, seats below */}
           <div className="watch-room__left">
             <InsideView isFullScreen={isFullScreen}>
               <ScreenPlayer
@@ -493,7 +495,6 @@ export default function WatchRoom() {
             messages={messages}
             onSend={handleSend}
             users={users}
-            viewerCount={users.length}
             totalSeats={seatSections.filter((seat) => seat.isBooked).length}
             isFullScreen={isFullScreen}
             isOpen={isChatOpen}

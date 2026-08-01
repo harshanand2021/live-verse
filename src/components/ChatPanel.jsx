@@ -3,11 +3,14 @@ import "./styles/ChatPanel.css";
 
 const reactions = ['❤️', '😂', '😮', '👏', '🔥'];
 
-
+// Fallback color when we only have a name (backend doesn't store avatar colors).
+// Derive a stable color from the name so the same person always looks the same.
 const AVATAR_COLORS = ['#FF5A3C', '#7C6BFF', '#4ADE80', '#FFD166', '#06D6A0', '#EF476F'];
-function colorForId(id) {
-  const n = parseInt(id, 10) || 0;
-  return AVATAR_COLORS[n % AVATAR_COLORS.length];
+function colorForName(name) {
+  const str = String(name || '');
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
 // Turn an ISO timestamp into a short HH:MM label.
