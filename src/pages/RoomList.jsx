@@ -36,7 +36,6 @@ export default function RoomList() {
   }, [loadRooms]);
 
   const handleJoinByCode = async (e) => {
-    alert('handler ran, code = ' + joinCode);
     if (e && e.preventDefault) e.preventDefault();
     const code = joinCode.trim();
     if (!code) {
