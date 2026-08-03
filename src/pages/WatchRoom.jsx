@@ -558,6 +558,11 @@ export default function WatchRoom() {
             totalSeats={seatSections.filter((seat) => seat.isBooked).length}
             isFullScreen={isFullScreen}
             isOpen={isChatOpen}
+            // Polls ride on the chat stream, so the panel needs to know who is
+            // allowed to start one and whose vote is whose.
+            isHost={isHost}
+            hostId={room.hostId}
+            currentUserId={currentUser.id}
           />
 
           {talkSeat && (

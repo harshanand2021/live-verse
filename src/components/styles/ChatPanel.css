@@ -150,6 +150,127 @@
   word-break: break-word;
 }
 
+/* One-liner left in the stream where a poll was started, while the poll
+   itself is pinned above the composer. */
+.chat-poll-ref {
+  font-size: 10.5px;
+  color: var(--velvet-violet);
+  padding: 4px 8px;
+  border-left: 2px solid var(--velvet-violet-dim);
+  word-break: break-word;
+}
+
+/* ─── Pinned live poll ───────────────────────────────────── */
+.chat-panel__pinned {
+  padding: 10px 12px;
+  border-top: 1px solid var(--velvet);
+  background: var(--ink-raised-2);
+  flex-shrink: 0;
+  max-height: 45%;
+  overflow-y: auto;
+}
+
+.chat-panel__pinned::-webkit-scrollbar { width: 4px; }
+.chat-panel__pinned::-webkit-scrollbar-track { background: transparent; }
+.chat-panel__pinned::-webkit-scrollbar-thumb { background: var(--velvet); border-radius: 2px; }
+
+/* ─── Host poll builder ──────────────────────────────────── */
+.poll-form {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--velvet);
+  flex-shrink: 0;
+}
+
+.poll-form__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: var(--cream);
+}
+
+.poll-form__cancel {
+  background: transparent;
+  border: none;
+  color: var(--mute);
+  font-size: 11.5px;
+  padding: 0;
+}
+
+.poll-form__cancel:hover { color: var(--cream-dim); }
+
+.poll-form__input {
+  width: 100%;
+  background: var(--ink);
+  border: 1.5px solid var(--velvet);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  color: var(--cream);
+  font-size: 12.5px;
+  min-width: 0;
+  transition: border-color 0.15s;
+}
+
+.poll-form__input::placeholder { color: var(--mute); }
+.poll-form__input:focus {
+  border-color: var(--velvet-violet);
+  outline: none;
+}
+
+.poll-form__option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.poll-form__remove {
+  background: transparent;
+  border: none;
+  color: var(--mute);
+  font-size: 17px;
+  line-height: 1;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+
+.poll-form__remove:hover { color: var(--danger); }
+
+.poll-form__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.poll-form__add {
+  background: transparent;
+  border: 1px dashed var(--velvet);
+  border-radius: var(--radius-sm);
+  color: var(--cream-dim);
+  font-size: 11.5px;
+  padding: 5px 10px;
+}
+
+.poll-form__add:hover:not(:disabled) { border-color: var(--velvet-violet); }
+.poll-form__add:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.poll-form__launch {
+  background: var(--velvet-violet);
+  color: var(--cream);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 14px;
+  transition: opacity 0.15s;
+}
+
+.poll-form__launch:disabled { opacity: 0.35; cursor: not-allowed; }
+
 /* ─── Reactions row ──────────────────────────────────────── */
 .chat-panel__reactions {
   display: flex;
@@ -200,6 +321,25 @@
 .chat-panel__input:focus {
   border-color: var(--marquee);
   outline: none;
+}
+
+.chat-panel__poll-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  background: var(--ink-raised);
+  border: 1.5px solid var(--velvet);
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.chat-panel__poll-btn:hover {
+  background: var(--velvet);
+  border-color: var(--velvet-violet);
 }
 
 .chat-panel__send {
