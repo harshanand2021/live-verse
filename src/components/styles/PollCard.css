@@ -1,0 +1,144 @@
+/* ─── Poll card ───────────────────────────────────────────── */
+.poll-card {
+  background: var(--ink-raised);
+  border: 1px solid var(--velvet-violet-dim);
+  border-radius: var(--radius-md);
+  padding: 11px 12px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.poll-card--closed {
+  border-color: var(--velvet);
+}
+
+.poll-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.poll-card__tag {
+  font-size: 9.5px;
+  letter-spacing: 0.09em;
+  color: var(--velvet-violet);
+}
+
+.poll-card--closed .poll-card__tag {
+  color: var(--mute);
+}
+
+.poll-card__end {
+  background: transparent;
+  border: 1px solid var(--velvet);
+  border-radius: var(--radius-sm);
+  color: var(--cream-dim);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.poll-card__end:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.poll-card__question {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--cream);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.poll-card__options {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+}
+
+/* ─── Option row: doubles as the vote button and the result bar ─── */
+.poll-option {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  overflow: hidden;
+  background: var(--ink);
+  border: 1.5px solid var(--velvet);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.poll-option:not(:disabled):hover {
+  border-color: var(--velvet-violet);
+}
+
+.poll-option:disabled {
+  cursor: default;
+}
+
+.poll-option--mine {
+  border-color: var(--velvet-violet);
+}
+
+.poll-option--winner {
+  border-color: var(--success);
+}
+
+/* The tally bar sits behind the label so the text stays readable at any width. */
+.poll-option__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--velvet-violet);
+  opacity: 0.28;
+  transition: width 0.35s ease;
+}
+
+.poll-option--winner .poll-option__fill {
+  background: var(--success);
+  opacity: 0.22;
+}
+
+.poll-option__label {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  color: var(--cream);
+  word-break: break-word;
+  min-width: 0;
+}
+
+.poll-option__check {
+  color: var(--velvet-violet);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.poll-option__pct {
+  position: relative;
+  font-size: 11px;
+  color: var(--cream-dim);
+  flex-shrink: 0;
+}
+
+.poll-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--mute);
+}
