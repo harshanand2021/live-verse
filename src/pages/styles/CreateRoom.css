@@ -6,24 +6,34 @@
   max-width: 640px;
 }
 
+/* Used here without the base .container, so it carries its own gutters. */
+.create-room-page .container--narrow {
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
 .create-room__eyebrow {
   color: var(--marquee);
   font-size: 12px;
   letter-spacing: 0.14em;
   margin-bottom: 10px;
+  text-align: center;
 }
 
 .create-room__title {
   font-size: clamp(32px, 5vw, 46px);
   margin-bottom: 12px;
+  text-align: center;
 }
 
 .create-room__sub {
   color: var(--cream-dim);
   font-size: 15.5px;
   line-height: 1.5;
-  margin-bottom: 36px;
+  margin: 0 auto 36px;
   max-width: 480px;
+  text-align: center;
 }
 
 .create-room-form {
