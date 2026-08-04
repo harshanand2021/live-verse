@@ -27,6 +27,9 @@ function Seat({ seat, status, isClickable, onClick, onHover, isHovered }) {
     <button
       type="button"
       className={`seat ${cfg.cls} ${isHovered ? 'seat--hovered' : ''}`}
+      // Lets the room find this seat's position on screen so the fly-through
+      // into the theatre can launch from exactly where you're sitting.
+      data-seat-number={seat.seatNumber}
       disabled={!isClickable}
       aria-pressed={status === 'you'}
       aria-label={`${label}, ${seat.bookedByName ? seat.bookedByName + ', ' : ''}${cfg.label}`}

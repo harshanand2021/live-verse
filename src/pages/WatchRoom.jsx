@@ -17,6 +17,7 @@ import ChatPanel from "../components/ChatPanel";
 import HostControls from "../components/HostControls";
 import InsideView from "../components/InsideView";
 import PrivateTalk from "../components/PrivateTalk";
+import TheaterFlythrough from "../components/TheaterFlythrough";
 
 import "./styles/WatchRoom.css";
 import { useRoomSocket } from "../api/useRoomSocket";
@@ -36,6 +37,9 @@ function colorForId(id) {
   const n = parseInt(id, 10) || 0;
   return AVATAR_COLORS[n % AVATAR_COLORS.length];
 }
+
+
+const FLIGHT_MS = 3000;
 
 export default function WatchRoom() {
   const { roomId } = useParams();
@@ -60,6 +64,12 @@ export default function WatchRoom() {
   // one before the screen is revealed — no seat, no show.
   const [selectedSeatId, setSelectedSeatId] = useState(null);
   const [hasEntered, setHasEntered] = useState(false);
+
+  // Non-null while the drone shot from the seat to the screen is in the air;
+  // holds the seat's centre in viewport pixels so the flight can start there.
+  const [flight, setFlight] = useState(null);
+  const pickerRef = useRef(null);
+  const claimRef = useRef(null);
 
   const [localVideo, setLocalVideo] = useState(null);
   // Latest playback position/state broadcast by the host, applied by ScreenPlayer.
@@ -365,12 +375,11 @@ export default function WatchRoom() {
       </div>
     );
 
-  const handleEnterTheatre = async () => {
-    if (!selectedSeatId) return;
+  // Touchdown: swap the picker out for the theatre once the camera arrives.
+  // The seat claim was fired at take-off, so by now it has usually landed too.
+  const landInTheatre = async (claim) => {
     try {
-      await claimSeat(room.id, selectedSeatId);
-      const updatedSeats = await getLiveSeats(room.id);
-
+      const updatedSeats = await claim;
       setSeatSections(updatedSeats);
       setAnimateEntry(true);
       setHasEntered(true);
@@ -378,7 +387,49 @@ export default function WatchRoom() {
       setLoadError(
         error.response?.data?.message || "Unable to claim that seat.",
       );
+    } finally {
+      setFlight(null);
     }
+  };
+
+  const handleEnterTheatre = () => {
+    if (!selectedSeatId || flight) return;
+
+    // Claim the seat while the camera is flying — the round-trip hides inside
+    // the shot instead of stalling in front of it.
+    const claim = claimSeat(room.id, selectedSeatId).then(() =>
+      getLiveSeats(room.id),
+    );
+    claimRef.current = claim;
+    claim.catch(() => {}); // settled again at touchdown; this just keeps it from going unhandled
+
+    const seatEl = document.querySelector(
+      `[data-seat-number="${selectedSeatId}"]`,
+    );
+    const prefersReduced = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
+    // No seat to launch from, or motion is unwelcome: cut straight in.
+    if (!seatEl || prefersReduced) {
+      landInTheatre(claim);
+      return;
+    }
+
+    const seatRect = seatEl.getBoundingClientRect();
+    const originX = seatRect.left + seatRect.width / 2;
+    const originY = seatRect.top + seatRect.height / 2;
+
+    // The picker dives toward the seat as the camera leaves it, so the two
+    // views push in the same direction across the cut.
+    const picker = pickerRef.current;
+    if (picker) {
+      const pickerRect = picker.getBoundingClientRect();
+      picker.style.setProperty("--dive-x", `${originX - pickerRect.left}px`);
+      picker.style.setProperty("--dive-y", `${originY - pickerRect.top}px`);
+    }
+
+    setFlight({ x: originX, y: originY, seatNumber: selectedSeatId });
   };
 
   const handleSend = (text) => {
@@ -431,7 +482,11 @@ export default function WatchRoom() {
 
       {!hasEntered ? (
         /* ── Seat picker: the screen stays hidden until a seat is chosen ── */
-        <div className="watch-room__picker container">
+        <div
+          ref={pickerRef}
+          className={`watch-room__picker container ${flight ? "watch-room__picker--diving" : ""}`}
+          style={flight ? { "--flight-dur": `${FLIGHT_MS}ms` } : undefined}
+        >
           <div className="watch-room__picker-intro">
             <h3>Choose your seat</h3>
             <p>
@@ -458,7 +513,7 @@ export default function WatchRoom() {
             <button
               type="button"
               className="watch-room__picker-cta"
-              disabled={!selectedSeatId}
+              disabled={!selectedSeatId || Boolean(flight)}
               onClick={handleEnterTheatre}
             >
               Take Your Seat & Watch
@@ -574,6 +629,17 @@ export default function WatchRoom() {
             />
           )}
         </div>
+      )}
+
+      {/* Camera lifts off the claimed seat and lands on the screen; the room
+          behind it is already assembled by the time the shot dissolves. */}
+      {flight && (
+        <TheaterFlythrough
+          origin={flight}
+          seatNumber={flight.seatNumber}
+          duration={FLIGHT_MS}
+          onComplete={() => landInTheatre(claimRef.current)}
+        />
       )}
     </div>
   );

@@ -1,170 +1,387 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Drone-camera flight from the claimed seat to the screen.
+
+   Timing: every beat is expressed as a fraction of --dur so the whole shot
+   stays in sync when the duration changes. The rough cue sheet:
+
+     0 – 22%   iris blooms out of the seat, letterbox bars slide in
+     0 – 16%   the seat you left drops out of frame as the camera climbs
+    16 – 83%   rows of headrests fly past, one fading as each is passed
+    10 – 78%   speed streaks build and ease off at peak velocity
+     0 – 70%   vanishing point drifts from the seat to centre frame
+    72 – 100%  screen fills, flare peaks, overlay dissolves into the room
+   ═══════════════════════════════════════════════════════════════════════ */
+
 .flythrough {
   position: fixed;
   inset: 0;
   z-index: 200;
-  background: #000;
-  perspective: 420px;
-  perspective-origin: 50% 42%;
   overflow: hidden;
-  transition: opacity 0.4s ease-out;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 30%, rgba(124, 107, 255, 0.10), transparent 70%),
+    #05030a;
+  /* Bloom out of the seat itself instead of cutting to black. */
+  animation: fly-iris calc(var(--dur) * 0.22) cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-.flythrough--leaving {
-  opacity: 0;
+@keyframes fly-iris {
+  from { clip-path: circle(0 at var(--ox) var(--oy)); }
+  to   { clip-path: circle(160vmax at var(--ox) var(--oy)); }
 }
+
+/* Touchdown: cross-dissolve into the real theatre view underneath. */
+.flythrough--landing {
+  opacity: 0;
+  transition: opacity calc(var(--dur) * 0.12) ease-out;
+}
+
+/* ─── Camera rig: perspective, the drift to centre, and the bank ───────── */
+
+.flythrough__camera {
+  position: absolute;
+  inset: 0;
+  perspective: 560px;
+  perspective-origin: var(--opx) var(--opy);
+  transform-style: preserve-3d;
+  animation:
+    fly-look calc(var(--dur) * 0.7) cubic-bezier(0.33, 0, 0.2, 1) forwards,
+    fly-bank var(--dur) ease-in-out forwards;
+}
+
+/* The vanishing point starts over your seat and swings to centre frame. */
+@keyframes fly-look {
+  to { perspective-origin: 50% 44%; }
+}
+
+/* The roll that separates a drone from a dolly — it tips leaving the seat,
+   swings through the rows, and levels off onto the screen. */
+@keyframes fly-bank {
+  0%   { rotate: 0deg; }
+  22%  { rotate: -3.2deg; }
+  58%  { rotate: 2.2deg; }
+  86%  { rotate: -0.6deg; }
+  100% { rotate: 0deg; }
+}
+
+/* ─── The push: forward through the room while climbing off the seat ───── */
 
 .flythrough__scene {
   position: absolute;
   inset: 0;
   transform-style: preserve-3d;
-  animation: fly-forward 2.4s cubic-bezier(0.45, 0, 0.25, 1) forwards;
+  will-change: transform;
+  animation: fly-forward var(--dur) cubic-bezier(0.42, 0, 0.22, 1) forwards;
 }
 
-/* ── Seat floor planes (tilted flat, at 3 depths for parallax) ── */
-.flythrough__seats {
+/* Positive Y moves the room down the frame, i.e. the camera gains height.
+   The small Y/yaw wander is what keeps it from feeling like a rail. */
+@keyframes fly-forward {
+  0%   { transform: translate3d(0, 0, 0) rotateY(0deg); }
+  18%  { transform: translate3d(-14px, 34px, 190px) rotateY(1.6deg); }
+  55%  { transform: translate3d(26px, 118px, 780px) rotateY(-1.4deg); }
+  100% { transform: translate3d(0, 168px, 1400px) rotateY(0deg); }
+}
+
+/* ─── Room geometry ────────────────────────────────────────────────────── */
+
+/* Raked floor receding from just under the camera toward the screen. */
+.flythrough__floor {
   position: absolute;
   left: 50%;
-  bottom: -5%;
-  width: 260%;
-  height: 900px;
-  transform-origin: bottom center;
-  background-repeat: repeat;
-  background-image:
-    repeating-linear-gradient(
-      to bottom,
-      rgba(124, 107, 255, 0.22) 0 6px,
-      rgba(124, 107, 255, 0.04) 6px 14px,
-      transparent 14px 54px
-    ),
-    repeating-linear-gradient(
-      to right,
-      rgba(255, 255, 255, 0.06) 0 2px,
-      transparent 2px 60px
-    );
+  top: 50%;
+  width: 2600px;
+  height: 3000px;
+  margin-left: -1300px;
+  transform: translateY(210px) rotateX(-90deg);
+  transform-origin: 50% 0%;
+  background:
+    /* aisle strip lights down both gangways */
+    linear-gradient(to right,
+      transparent 26%, rgba(255, 90, 60, 0.16) 27.5%, transparent 29%,
+      transparent 71%, rgba(255, 90, 60, 0.16) 72.5%, transparent 74%),
+    /* row markings receding into the dark */
+    repeating-linear-gradient(to bottom,
+      rgba(255, 150, 190, 0.07) 0 2px, transparent 2px 180px),
+    linear-gradient(to top, #140d1c, #05030a 68%);
 }
 
-.flythrough__seats--back {
-  transform: translateX(-50%) rotateX(74deg) translateZ(-700px);
-  opacity: 0.5;
-}
-.flythrough__seats--mid {
-  transform: translateX(-50%) rotateX(74deg) translateZ(-350px);
-  opacity: 0.75;
-}
-.flythrough__seats--front {
-  transform: translateX(-50%) rotateX(74deg) translateZ(0px);
-  opacity: 1;
+/* Side walls, each spanning the full depth of the run-up. */
+.flythrough__wall {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3000px;
+  height: 1000px;
+  margin: -500px 0 0 -1500px;
+  background:
+    repeating-linear-gradient(to right,
+      rgba(255, 150, 110, 0.12) 0 3px, transparent 3px 260px),
+    linear-gradient(to bottom, #05030a, #17101f 55%, #05030a);
+  opacity: 0.85;
 }
 
-/* ── The screen: starts far, upright, centered ── */
+.flythrough__wall--left  { transform: translateZ(-1500px) translateX(-780px) rotateY(90deg); }
+.flythrough__wall--right { transform: translateZ(-1500px) translateX(780px) rotateY(-90deg); }
+
+/* The seat being left behind. Anchored to the aperture rather than to frame
+   centre, so the first thing through the opening iris is the headrest of the
+   seat you just picked — then the camera climbs off it. */
+.flythrough__origin-seat {
+  position: absolute;
+  left: var(--ox);
+  top: var(--oy);
+  width: 300px;
+  height: 200px;
+  transform: translate(-50%, -10%) translateZ(120px);
+  border-radius: 34px 34px 8px 8px;
+  background: linear-gradient(to bottom, #33253f 0%, #150f1f 55%, #0a0710 100%);
+  box-shadow:
+    inset 0 5px 0 rgba(255, 150, 190, 0.42),
+    0 0 80px rgba(255, 90, 60, 0.26);
+  /* Holds crisp while the aperture is still small, then clears out before it
+     can wash over the front row. */
+  animation: fly-origin-drop calc(var(--dur) * 0.1) ease-in calc(var(--dur) * 0.03) forwards;
+}
+
+@keyframes fly-origin-drop {
+  to { opacity: 0; }
+}
+
+/* ─── Rows of headrests ────────────────────────────────────────────────── */
+
+.flythrough__row {
+  --haze: calc(1 - var(--i) * 0.09);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: flex;
+  gap: 26px;
+  width: 1560px;
+  margin-left: -780px;
+  /* Rows sit lower as they near the screen — the rake of a real auditorium. */
+  transform:
+    translateY(calc(96px + var(--i) * 12px))
+    translateZ(calc(-120px - var(--i) * 200px));
+  transform-style: preserve-3d;
+  opacity: var(--haze);
+  /* Each row clears out as the camera reaches it, staggered by depth. */
+  animation: fly-row-pass calc(var(--dur) * 0.14) ease-in forwards;
+  animation-delay: calc(var(--dur) * (0.16 + var(--i) * 0.088));
+}
+
+@keyframes fly-row-pass {
+  from { opacity: var(--haze); }
+  to   { opacity: 0; }
+}
+
+.flythrough__seat {
+  flex: 1;
+  height: 92px;
+  border-radius: 14px 14px 5px 5px;
+  background: linear-gradient(to bottom, #2b2136 0%, #150f1d 62%, #0a0710 100%);
+  /* Top edge catches the screen light, the way a dark auditorium reads. */
+  box-shadow:
+    inset 0 2px 0 rgba(255, 150, 190, 0.30),
+    0 -6px 20px rgba(255, 120, 170, 0.10);
+}
+
+/* ─── The screen the shot lands on ─────────────────────────────────────── */
+
 .flythrough__screen {
   position: absolute;
-  top: 24%;
   left: 50%;
-  width: 520px;
-  height: 292px;
-  margin-left: -260px;
-  transform: translateZ(-850px);
-  background: linear-gradient(140deg, #1c1226 0%, #050308 100%);
-  border: 2px solid rgba(255, 90, 60, 0.45);
-  border-radius: 6px;
-  box-shadow:
-    0 0 90px rgba(255, 90, 60, 0.35),
-    inset 0 0 60px rgba(124, 107, 255, 0.15);
+  top: 50%;
+  width: 1200px;
+  height: 675px;
+  margin: -337px 0 0 -600px;
+  transform: translateZ(-1500px);
   display: flex;
   align-items: center;
   justify-content: center;
+  background: linear-gradient(140deg, #1c1226 0%, #050308 100%);
+  border: 3px solid rgba(255, 90, 60, 0.45);
+  border-radius: 8px;
+  box-shadow:
+    0 0 160px rgba(255, 90, 60, 0.35),
+    inset 0 0 120px rgba(124, 107, 255, 0.16);
 }
 
 .flythrough__screen-glow {
   position: absolute;
   inset: 0;
-  background: radial-gradient(
-    ellipse 60% 55% at 50% 45%,
-    rgba(255, 90, 60, 0.25),
-    transparent 70%
-  );
+  background: radial-gradient(ellipse 60% 55% at 50% 45%, rgba(255, 90, 60, 0.28), transparent 70%);
+  animation: fly-screen-bloom var(--dur) ease-in forwards;
+}
+
+@keyframes fly-screen-bloom {
+  0%, 55% { opacity: 0.7; }
+  100%    { opacity: 1.6; }
 }
 
 .flythrough__screen-label {
   position: relative;
   color: rgba(245, 232, 202, 0.9);
-  font-size: 34px;
+  font-size: 76px;
   font-weight: 800;
-  letter-spacing: 0.18em;
-  text-shadow: 0 0 24px rgba(255, 90, 60, 0.6);
+  letter-spacing: 0.2em;
+  text-shadow: 0 0 40px rgba(255, 90, 60, 0.6);
 }
 
-/* ── Side walls for tunnel framing ── */
-.flythrough__wall {
+/* ─── Lens-locked atmosphere ───────────────────────────────────────────── */
+
+.flythrough__beam {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 400px;
-  background: linear-gradient(to right, rgba(10, 6, 16, 0.9), transparent);
-}
-.flythrough__wall--left {
-  left: 0;
-  transform: rotateY(38deg) translateZ(-200px);
-  transform-origin: left center;
-}
-.flythrough__wall--right {
-  right: 0;
-  background: linear-gradient(to left, rgba(10, 6, 16, 0.9), transparent);
-  transform: rotateY(-38deg) translateZ(-200px);
-  transform-origin: right center;
+  left: 50%;
+  top: -12%;
+  width: 64vw;
+  height: 96vh;
+  margin-left: -32vw;
+  pointer-events: none;
+  clip-path: polygon(45% 0%, 55% 0%, 100% 100%, 0% 100%);
+  background: linear-gradient(to bottom,
+    rgba(255, 150, 190, 0.13), rgba(255, 90, 60, 0.03) 68%, transparent);
+  /* Heavy blur so the cone's clipped edges don't read as a hard polygon
+     against the side walls. */
+  filter: blur(16px);
+  animation: fly-beam-sway var(--dur) ease-in-out forwards;
 }
 
-/* ── Camera push ── */
-@keyframes fly-forward {
-  from {
-    transform: translateZ(0px);
-  }
-  to {
-    transform: translateZ(820px);
-  }
+@keyframes fly-beam-sway {
+  0%   { opacity: 0; transform: translateX(-3%) rotate(-1.6deg); }
+  30%  { opacity: 1; }
+  70%  { transform: translateX(3%) rotate(1.4deg); }
+  100% { opacity: 0.35; transform: translateX(0) rotate(0deg); }
 }
 
-/* ── Vignette + caption ── */
+.flythrough__mote {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 235, 214, 0.75);
+  filter: blur(0.5px);
+  animation: fly-mote 4.5s linear infinite;
+}
+
+@keyframes fly-mote {
+  0%   { opacity: 0; transform: translate3d(0, 0, 0) scale(var(--mote-scale)); }
+  25%  { opacity: 0.8; }
+  100% { opacity: 0; transform: translate3d(26px, -70px, 0) scale(var(--mote-scale)); }
+}
+
+/* Radial smear at peak velocity — the reason it reads as speed, not zoom. */
+.flythrough__streaks {
+  position: absolute;
+  inset: -20%;
+  pointer-events: none;
+  opacity: 0;
+  mix-blend-mode: screen;
+  background: repeating-conic-gradient(from 0deg at 50% 46%,
+    rgba(255, 255, 255, 0.06) 0deg 0.6deg, transparent 0.6deg 5deg);
+  -webkit-mask-image: radial-gradient(circle at 50% 46%, transparent 12%, #000 62%);
+  mask-image: radial-gradient(circle at 50% 46%, transparent 12%, #000 62%);
+  animation: fly-streaks var(--dur) ease-in-out forwards;
+}
+
+@keyframes fly-streaks {
+  0%, 10% { opacity: 0;    transform: scale(1); }
+  45%     { opacity: 0.42; transform: scale(1.25); }
+  78%     { opacity: 0.16; transform: scale(1.6); }
+  100%    { opacity: 0;    transform: scale(1.9); }
+}
+
 .flythrough__vignette {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(
-    ellipse 90% 80% at 50% 45%,
-    transparent 55%,
-    rgba(0, 0, 0, 0.85) 100%
-  );
+  background: radial-gradient(ellipse 90% 80% at 50% 45%, transparent 52%, rgba(0, 0, 0, 0.88) 100%);
 }
+
+/* Bloom off the screen as the camera arrives — carries the last of the
+   distance the geometry alone can't close. */
+.flythrough__flare {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(ellipse 46% 40% at 50% 44%,
+    rgba(255, 228, 205, 0.85), rgba(255, 120, 170, 0.32) 42%, transparent 72%);
+  animation: fly-flare var(--dur) ease-in forwards;
+}
+
+@keyframes fly-flare {
+  0%, 72% { opacity: 0; }
+  92%     { opacity: 0.55; }
+  100%    { opacity: 0; }
+}
+
+/* ─── Letterbox ────────────────────────────────────────────────────────── */
+
+.flythrough__bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 11vh;
+  background: #000;
+  pointer-events: none;
+}
+
+.flythrough__bar--top    { top: 0;    animation: fly-bar-top var(--dur) cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.flythrough__bar--bottom { bottom: 0; animation: fly-bar-bottom var(--dur) cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+@keyframes fly-bar-top {
+  0%        { transform: translateY(-100%); }
+  16%, 84%  { transform: translateY(0); }
+  100%      { transform: translateY(-100%); }
+}
+
+@keyframes fly-bar-bottom {
+  0%        { transform: translateY(100%); }
+  16%, 84%  { transform: translateY(0); }
+  100%      { transform: translateY(100%); }
+}
+
+/* ─── Caption ──────────────────────────────────────────────────────────── */
 
 .flythrough__caption {
   position: absolute;
-  bottom: 8%;
+  bottom: 15%;
   left: 50%;
   transform: translateX(-50%);
-  color: rgba(245, 232, 202, 0.7);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  color: rgba(245, 232, 202, 0.72);
   font-size: 13px;
   letter-spacing: 0.28em;
-  animation: caption-fade 2.4s ease-out forwards;
+  white-space: nowrap;
+  animation: fly-caption var(--dur) ease-out forwards;
 }
 
-@keyframes caption-fade {
-  0% {
-    opacity: 0;
-  }
-  25% {
-    opacity: 1;
-  }
-  75% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
+.flythrough__caption-seat {
+  color: var(--marquee);
+  font-size: 11px;
+  letter-spacing: 0.36em;
+  text-transform: uppercase;
 }
 
+@keyframes fly-caption {
+  0%   { opacity: 0; transform: translate(-50%, 14px); }
+  25%  { opacity: 1; transform: translate(-50%, 0); }
+  70%  { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -10px); }
+}
+
+@media (max-width: 720px) {
+  .flythrough__camera { perspective: 420px; }
+  .flythrough__screen-label { font-size: 42px; }
+  .flythrough__bar { height: 8vh; }
+}
+
+/* Nothing here is load-bearing — skip straight to the room. */
 @media (prefers-reduced-motion: reduce) {
-  .flythrough {
-    display: none;
-  }
+  .flythrough { display: none; }
 }

@@ -144,6 +144,24 @@
   margin-top: 4px;
 }
 
+/* Take-off: the picker rushes toward the seat that was just claimed while the
+   fly-through irises open out of that same point, so both views push the same
+   way across the cut. --dive-x/y are the seat's centre, set by the room. */
+.watch-room__picker--diving {
+  transform-origin: var(--dive-x, 50%) var(--dive-y, 50%);
+  pointer-events: none;
+  animation: picker-dive calc(var(--flight-dur, 3000ms) * 0.35) cubic-bezier(0.5, 0, 0.9, 0.4) forwards;
+}
+
+@keyframes picker-dive {
+  from { transform: scale(1);   opacity: 1; filter: blur(0); }
+  to   { transform: scale(2.7); opacity: 0; filter: blur(7px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .watch-room__picker--diving { animation: none; }
+}
+
 .watch-room__picker-intro {
   text-align: center;
 }
