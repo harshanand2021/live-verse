@@ -68,6 +68,19 @@
   border-bottom-color: var(--marquee);
 }
 
+/* Marks the Polls tab while a poll is open, so a viewer on another tab can
+   tell they're being asked something. */
+.chat-panel__tab-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 5px;
+  vertical-align: middle;
+  border-radius: 50%;
+  background: var(--marquee);
+  animation: chat-pulse 2s ease-in-out infinite;
+}
+
 .chat-panel__count {
   display: flex;
   align-items: center;
@@ -160,6 +173,55 @@
   word-break: break-word;
 }
 
+/* ─── Poll rejection banner ──────────────────────────────── */
+.chat-panel__poll-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 12px;
+  flex-shrink: 0;
+  background: rgba(239, 71, 111, 0.12);
+  border-bottom: 1px solid rgba(239, 71, 111, 0.3);
+  color: #ff9db3;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.chat-panel__poll-error-close {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 16px;
+  line-height: 1;
+  margin-left: auto;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.chat-panel__poll-error-close:hover { opacity: 1; }
+
+/* ─── Polls tab ──────────────────────────────────────────── */
+.chat-panel__polls {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.chat-panel__polls::-webkit-scrollbar { width: 4px; }
+.chat-panel__polls::-webkit-scrollbar-track { background: transparent; }
+.chat-panel__polls::-webkit-scrollbar-thumb { background: var(--velvet); border-radius: 2px; }
+
+.chat-panel__empty {
+  padding: 16px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--mute);
+}
+
 /* ─── Pinned live poll ───────────────────────────────────── */
 .chat-panel__pinned {
   padding: 10px 12px;
@@ -190,6 +252,16 @@
   justify-content: space-between;
   font-size: 12.5px;
   color: var(--cream);
+}
+
+/* Core allows one open poll per room; this says why Start is unavailable. */
+.poll-form__note {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--marquee);
+  background: rgba(255, 90, 60, 0.1);
+  border-radius: var(--radius-sm, 6px);
+  padding: 7px 9px;
 }
 
 .poll-form__cancel {
