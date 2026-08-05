@@ -22,6 +22,19 @@ import TheaterFlythrough from "../components/TheaterFlythrough";
 import "./styles/WatchRoom.css";
 import { useRoomSocket } from "../api/useRoomSocket";
 import { useScreenShare } from "../api/useScreenShare";
+import {
+  MIN_OPTIONS as MIN_POLL_OPTIONS,
+  VOTED_UNKNOWN,
+  buildPollCreatePayload,
+  describePollError,
+  findActivePoll,
+  isAlreadyVotedError,
+  isPollError,
+  normalizePoll,
+  readMyVotes,
+  upsertPoll,
+  writeMyVotes,
+} from "../api/roomPolls";
 
 // Stable avatar color derived from a user id, so the same person always
 // gets the same color in the viewers list.
@@ -37,7 +50,6 @@ function colorForId(id) {
   const n = parseInt(id, 10) || 0;
   return AVATAR_COLORS[n % AVATAR_COLORS.length];
 }
-
 
 const FLIGHT_MS = 3000;
 
@@ -75,44 +87,73 @@ export default function WatchRoom() {
   // Latest playback position/state broadcast by the host, applied by ScreenPlayer.
   const [syncState, setSyncState] = useState(null);
 
+  // Polls are owned by the backend now — these hold whatever the room's
+  // POLL_* events last told us. myVotes is the one piece the server can't
+  // replay to us, so it's kept locally; see api/roomPolls.js.
+  const [polls, setPolls] = useState([]);
+  const [myVotes, setMyVotes] = useState({});
+  const [pollError, setPollError] = useState("");
+  const [pollPending, setPollPending] = useState(false);
+  // Live headcount from the realtime service, kept apart from `users` — the
+  // roster is only as complete as the activity log we happened to receive.
+  const [participantCount, setParticipantCount] = useState(0);
+
   useEffect(() => {
-  if (!roomId) return;
+    if (!roomId) return;
 
-  const loadRoom = async () => {
-    try {
-      setLoading(true);
-      setLoadError("");
+    const loadRoom = async () => {
+      try {
+        setLoading(true);
+        setLoadError("");
 
-      const roomData = await getLiveById(roomId);
-      const seats = await getLiveSeats(roomId);
-      const comments = await getLiveComments(roomId);
-      const currentUserData = await getCurrentUser();
+        const roomData = await getLiveById(roomId);
+        const seats = await getLiveSeats(roomId);
+        const comments = await getLiveComments(roomId);
+        const currentUserData = await getCurrentUser();
 
-      setRoom(roomData);
-      setSeatSections(seats);
-      setMessages(comments);
-      setCurrentUser(currentUserData);
-      setUsers([]);
+        setRoom(roomData);
+        setSeatSections(seats);
+        setMessages(comments);
+        setCurrentUser(currentUserData);
+        setUsers([]);
+        // Our own poll answers, restored so a reload doesn't drop us back onto
+        // a poll we've already voted in with the card looking untouched.
+        setMyVotes(readMyVotes(currentUserData.id));
 
-      // If this user already booked a seat in this room, restore their
-      // seat and drop them straight into the theatre — no need to re-pick.
-      const mySeat = seats.find(
-        (seat) => seat.isBooked && String(seat.bookedByUserId) === String(currentUserData.id)
-      );
-      if (mySeat) {
-        setSelectedSeatId(mySeat.seatNumber);
-        setHasEntered(true);
+        // If this user already booked a seat in this room, restore their
+        // seat and drop them straight into the theatre — no need to re-pick.
+        const mySeat = seats.find(
+          (seat) =>
+            seat.isBooked &&
+            String(seat.bookedByUserId) === String(currentUserData.id),
+        );
+        if (mySeat) {
+          setSelectedSeatId(mySeat.seatNumber);
+          setHasEntered(true);
+        }
+      } catch (err) {
+        console.error("FAILED REQUEST:", err);
+        setLoadError(err.response?.data?.message || "Unable to load room.");
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("FAILED REQUEST:", err);
-      setLoadError(err.response?.data?.message || "Unable to load room.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
     loadRoom();
   }, [roomId]);
+
+  // Pass null to forget a vote that turned out not to have landed.
+  const rememberVote = useCallback(
+    (pollId, optionId) => {
+      setMyVotes((prev) => {
+        const next = { ...prev };
+        if (optionId == null) delete next[pollId];
+        else next[pollId] = optionId;
+        return writeMyVotes(currentUser?.id, next);
+      });
+    },
+    [currentUser?.id],
+  );
 
   const handleSetContent = async (url, kind) => {
     const trimmed = url.trim();
@@ -175,6 +216,10 @@ export default function WatchRoom() {
     [],
   );
 
+  // The vote we're waiting on. A rejection names neither the poll nor the
+  // action, so this is what lets us tell whose failure it was.
+  const pendingVoteRef = useRef(null);
+
   const {
     localStream,
     remoteStream,
@@ -217,15 +262,85 @@ export default function WatchRoom() {
     startShare();
   };
 
+  /* ── Polls ──
+   * Every action is fire-and-forget over the socket: Quarkus writes it through
+   * to Core and broadcasts the poll's new state back to the whole room, so the
+   * card only ever moves once the server says so. A refusal arrives separately
+   * as an ERROR, addressed to us alone.
+   */
+  const activePoll = useMemo(() => findActivePoll(polls), [polls]);
+
+  const handleCreatePoll = useCallback(
+    (question, options) => {
+      if (!isHost) return;
+
+      const payload = buildPollCreatePayload(question, options);
+      if (payload.options.length < MIN_POLL_OPTIONS) return;
+
+      setPollError("");
+      setPollPending(true);
+      if (!sendSignal("POLL_CREATE", payload)) {
+        setPollPending(false);
+        setPollError("Not connected — the poll wasn't started.");
+      }
+    },
+    [isHost, sendSignal],
+  );
+
+  const handleVotePoll = useCallback(
+    (poll, option) => {
+      if (poll.closed) return;
+
+      setPollError("");
+      setPollPending(true);
+      pendingVoteRef.current = {
+        pollId: poll.pollId,
+        optionId: option.optionId,
+      };
+
+      const sent = sendSignal("POLL_VOTE", {
+        pollId: Number(poll.pollId),
+        optionId: Number(option.optionId),
+      });
+
+      if (!sent) {
+        pendingVoteRef.current = null;
+        setPollPending(false);
+        setPollError("Not connected — your vote wasn't sent.");
+        return;
+      }
+
+      // Recorded now rather than on the echo, because the echo is a room
+      // broadcast that doesn't say whose vote it was. If Core turns it down,
+      // the ERROR handler takes it back.
+      rememberVote(poll.pollId, option.optionId);
+    },
+    [sendSignal, rememberVote],
+  );
+
+  const handleClosePoll = useCallback(
+    (poll) => {
+      if (!isHost || poll.closed) return;
+
+      setPollError("");
+      setPollPending(true);
+      if (!sendSignal("POLL_CLOSE", { pollId: Number(poll.pollId) })) {
+        setPollPending(false);
+        setPollError("Not connected — the poll wasn't closed.");
+      }
+    },
+    [isHost, sendSignal],
+  );
+
   const handleEndShow = async () => {
     if (!isHost || isEndingShow) return;
     if (
       !window.confirm("End this showing for everyone? This cannot be undone.")
     )
-    if (
-      !window.confirm("End this showing for everyone? This cannot be undone.")
-    )
-      return;
+      if (
+        !window.confirm("End this showing for everyone? This cannot be undone.")
+      )
+        return;
 
     setEndShowError("");
     setIsEndingShow(true);
@@ -309,6 +424,26 @@ export default function WatchRoom() {
         if (Array.isArray(payload.entries)) {
           payload.entries.forEach((e) => applyActivity(e.message));
         }
+      } else if (type === "PARTICIPANT_COUNT") {
+        setParticipantCount(Number(payload?.count) || 0);
+      } else if (
+        type === "POLL_ACTIVE" ||
+        type === "POLL_CREATE" ||
+        type === "POLL_VOTE" ||
+        type === "POLL_CLOSE"
+      ) {
+        // Each of these carries the poll's entire current state, so there's
+        // nothing to reconcile — the newest one simply wins. POLL_ACTIVE is the
+        // snapshot sent to us alone on connect; the rest are room broadcasts.
+        const poll = normalizePoll(payload);
+        if (poll) {
+          setPolls((prev) => upsertPoll(prev, poll));
+          setPollPending(false);
+          setPollError("");
+          if (pendingVoteRef.current?.pollId === poll.pollId) {
+            pendingVoteRef.current = null;
+          }
+        }
       } else if (
         type === "YOUTUBE_SYNC_STATE" ||
         type === "YOUTUBE_PLAY" ||
@@ -340,16 +475,40 @@ export default function WatchRoom() {
       } else if (type.startsWith("WEBRTC_")) {
         handleSignal(type, payload);
       } else if (type === "ERROR") {
+        const message = payload?.message;
         // The relay rejects a signal aimed at someone who has already gone;
         // drop that peer so we stop trying to reach them.
-        const goneUserId = payload?.message?.match(
+        const goneUserId = message?.match(
           /No active session for user (\d+)/,
         )?.[1];
-        if (goneUserId) dropPeer(goneUserId);
-        else console.warn("Room socket error:", payload?.message);
+
+        if (goneUserId) {
+          dropPeer(goneUserId);
+        } else if (isPollError(message)) {
+          // ERROR is the only way a poll action reports failure, and it comes
+          // back with nothing but text — no poll id, no indication of which
+          // action it belongs to.
+          setPollPending(false);
+          setPollError(describePollError(message));
+
+          // Whatever went wrong, the vote didn't count — take it back. The one
+          // exception is a rejection that says we'd already voted: that one
+          // means the vote landed on an earlier visit and only the option is
+          // lost to us.
+          const attempted = pendingVoteRef.current;
+          if (attempted) {
+            rememberVote(
+              attempted.pollId,
+              isAlreadyVotedError(message) ? VOTED_UNKNOWN : null,
+            );
+          }
+          pendingVoteRef.current = null;
+        } else {
+          console.warn("Room socket error:", message);
+        }
       }
     },
-    [applyActivity, handleSignal, dropPeer],
+    [applyActivity, handleSignal, dropPeer, rememberVote],
   );
 
   const { send, sendChat } = useRoomSocket({
@@ -450,6 +609,17 @@ export default function WatchRoom() {
       {/* ── Top bar (hidden in fullscreen) ── */}
       {!isFullScreen && (
         <div className="watch-room__topbar container">
+          {/* The report is live now, not a post-mortem — the activity it reads
+              only exists in the realtime service while the room is running. */}
+          {isHost && (
+            <Link
+              to={`/rooms/${room.id}/stats`}
+              className="watch-room__stats-link"
+            >
+              Room Stats →
+            </Link>
+          )}
+
           <Link to="/rooms" className="watch-room__back">
             <svg
               width="14"
@@ -610,14 +780,23 @@ export default function WatchRoom() {
             messages={messages}
             onSend={handleSend}
             users={users}
-            totalSeats={seatSections.filter((seat) => seat.isBooked).length}
+            // Who's actually connected right now, straight from the realtime
+            // service — not how many seats happen to be booked.
+            viewerCount={participantCount}
             isFullScreen={isFullScreen}
             isOpen={isChatOpen}
-            // Polls ride on the chat stream, so the panel needs to know who is
-            // allowed to start one and whose vote is whose.
             isHost={isHost}
-            hostId={room.hostId}
-            currentUserId={currentUser.id}
+            // Poll state is owned here, next to the socket; the panel renders it
+            // and sends actions back through these.
+            polls={polls}
+            activePoll={activePoll}
+            myVotes={myVotes}
+            pollError={pollError}
+            pollPending={pollPending}
+            onCreatePoll={handleCreatePoll}
+            onVote={handleVotePoll}
+            onClosePoll={handleClosePoll}
+            onDismissPollError={() => setPollError("")}
           />
 
           {talkSeat && (
