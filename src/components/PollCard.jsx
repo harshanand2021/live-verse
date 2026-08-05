@@ -1,18 +1,28 @@
-import { tallyPoll } from "../api/roomPolls";
+import { VOTED_UNKNOWN } from "../api/roomPolls";
 import "./styles/PollCard.css";
 
-export default function PollCard({ poll, myVote, isHost, onVote, onEnd }) {
-  const { counts, total, percents } = tallyPoll(poll);
+export default function PollCard({
+  poll,
+  myVote,
+  isHost,
+  onVote,
+  onClose,
+  pending = false,
+}) {
+  const { options, percents, totalVotes } = poll;
   const hasVoted = myVote != null;
   // Results stay hidden until you've had your say, so the first few votes don't
   // sway the room. The host sees them live — they're the one running the poll.
   const showResults = poll.closed || hasVoted || isHost;
-  const winning = poll.closed && total > 0 ? Math.max(...counts) : -1;
+  const winning =
+    poll.closed && totalVotes > 0
+      ? Math.max(...options.map((option) => option.voteCount))
+      : -1;
 
   return (
     <section
       className={`poll-card ${poll.closed ? "poll-card--closed" : ""}`}
-      aria-label={`Poll: ${poll.question}`}
+      aria-label={`Poll: ${poll.title}`}
     >
       <header className="poll-card__head">
         <span className="poll-card__tag mono">
@@ -22,27 +32,34 @@ export default function PollCard({ poll, myVote, isHost, onVote, onEnd }) {
           <button
             type="button"
             className="poll-card__end"
-            onClick={() => onEnd(poll)}
+            onClick={() => onClose(poll)}
+            disabled={pending}
           >
             End poll
           </button>
         ) : null}
       </header>
 
-      <p className="poll-card__question">{poll.question}</p>
+      <p className="poll-card__question">{poll.title}</p>
 
       <ul className="poll-card__options">
-        {poll.options.map((option, index) => {
-          const selected = myVote === index;
+        {options.map((option, index) => {
+          const selected = myVote === option.optionId;
           return (
-            <li key={index}>
+            <li key={option.optionId}>
               <button
                 type="button"
                 className={`poll-option ${selected ? "poll-option--mine" : ""} ${
                   showResults ? "poll-option--result" : ""
-                } ${winning > 0 && counts[index] === winning ? "poll-option--winner" : ""}`}
-                onClick={() => onVote(poll, index)}
-                disabled={poll.closed}
+                } ${
+                  winning > 0 && option.voteCount === winning
+                    ? "poll-option--winner"
+                    : ""
+                }`}
+                onClick={() => onVote(poll, option)}
+                // One vote per person, and it's final — Core rejects a second
+                // one rather than replacing the first, so don't offer the click.
+                disabled={poll.closed || hasVoted || pending}
                 aria-pressed={selected}
               >
                 {showResults ? (
@@ -58,7 +75,7 @@ export default function PollCard({ poll, myVote, isHost, onVote, onEnd }) {
                       ✓
                     </span>
                   ) : null}
-                  {option}
+                  {option.optionTitle}
                 </span>
                 {showResults ? (
                   <span className="poll-option__pct mono">
@@ -73,14 +90,16 @@ export default function PollCard({ poll, myVote, isHost, onVote, onEnd }) {
 
       <footer className="poll-card__foot mono">
         <span>
-          {total} {total === 1 ? "vote" : "votes"}
+          {totalVotes} {totalVotes === 1 ? "vote" : "votes"}
         </span>
         <span>
           {poll.closed
             ? "Voting has ended"
-            : hasVoted
-              ? "Tap another option to change your vote"
-              : "Pick one"}
+            : myVote === VOTED_UNKNOWN
+              ? "You've already voted in this poll"
+              : hasVoted
+                ? "Your vote is in"
+                : "Pick one — you only get the one"}
         </span>
       </footer>
     </section>
