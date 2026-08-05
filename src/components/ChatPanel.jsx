@@ -1,17 +1,11 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect } from "react";
 import PollCard from "./PollCard";
 import {
   MAX_OPTIONS,
   MAX_OPTION_LENGTH,
   MAX_QUESTION_LENGTH,
   MIN_OPTIONS,
-  buildEndEvent,
-  buildPollCreateEvent,
-  buildVoteEvent,
-  derivePolls,
-  encodePollEvent,
-  findActivePoll,
-  isPollEvent,
+  isLegacyPollMessage,
 } from "../api/roomPolls";
 import "./styles/ChatPanel.css";
 
@@ -48,25 +42,25 @@ export default function ChatPanel({
   isOpen,
   users = [],
   isHost = false,
-  hostId,
-  currentUserId,
+  // Poll state lives in WatchRoom, where the socket is — the panel just renders
+  // it and hands actions back.
+  polls = [],
+  activePoll = null,
+  myVotes = {},
+  pollError = "",
+  pollPending = false,
+  onCreatePoll,
+  onVote,
+  onClosePoll,
+  onDismissPollError,
 }) {
   const [draft, setDraft] = useState("");
-  const [tab, setTab] = useState("chat"); // 'chat' | 'viewers'
+  const [tab, setTab] = useState("chat"); // 'chat' | 'viewers' | 'polls'
   const [composer, setComposer] = useState("chat"); // 'chat' | 'poll'
   const [pollDraft, setPollDraft] = useState(EMPTY_POLL_DRAFT);
   const listRef = useRef(null);
 
-  // Polls live in the chat stream itself — see src/api/roomPolls.js — so the
-  // messages we already have are the whole source of truth.
-  const { polls, cardByIndex } = useMemo(
-    () => derivePolls(messages, hostId),
-    [messages, hostId],
-  );
-  // The newest open poll is pinned above the composer so it can't scroll away.
-  const activePoll = useMemo(() => findActivePoll(polls), [polls]);
-  const myId = currentUserId == null ? null : String(currentUserId);
-  const myVoteIn = (poll) => (myId == null ? null : poll.votes.get(myId) ?? null);
+  const myVoteIn = (poll) => myVotes[poll.pollId] ?? null;
 
   useEffect(() => {
     if (listRef.current) {
@@ -81,17 +75,14 @@ export default function ChatPanel({
     setDraft("");
   };
 
-  // Every poll action is just another chat message, so it reaches the room over
-  // the same socket everything else does.
-  const handleVote = (poll, optionIndex) => {
-    if (poll.closed) return;
-    if (myVoteIn(poll) === optionIndex) return; // already their answer
-    onSend(encodePollEvent(buildVoteEvent(poll.id, optionIndex)));
+  const handleVote = (poll, option) => {
+    if (poll.closed || myVoteIn(poll) != null) return;
+    onVote(poll, option);
   };
 
   const handleEndPoll = (poll) => {
     if (!isHost || poll.closed) return;
-    onSend(encodePollEvent(buildEndEvent(poll.id)));
+    onClosePoll(poll);
   };
 
   const pollDraftOptions = pollDraft.options.map((option) => option.trim());
@@ -101,17 +92,9 @@ export default function ChatPanel({
 
   const handleLaunchPoll = (e) => {
     e.preventDefault();
-    if (!isHost || !canLaunchPoll) return;
+    if (!isHost || !canLaunchPoll || pollPending) return;
 
-    // One poll at a time: the room shouldn't have to guess which one they're
-    // being asked about, so launching closes whatever was still running.
-    if (activePoll) onSend(encodePollEvent(buildEndEvent(activePoll.id)));
-
-    onSend(
-      encodePollEvent(
-        buildPollCreateEvent(pollDraft.question, pollDraft.options),
-      ),
-    );
+    onCreatePoll(pollDraft.question, pollDraft.options);
     setPollDraft(EMPTY_POLL_DRAFT);
     setComposer("chat");
     setTab("chat");
@@ -144,12 +127,37 @@ export default function ChatPanel({
           >
             Viewers
           </button>
+          <button
+            className={`chat-panel__tab ${tab === "polls" ? "chat-panel__tab--active" : ""}`}
+            onClick={() => setTab("polls")}
+          >
+            Polls
+            {activePoll && (
+              <span className="chat-panel__tab-dot" aria-label="A poll is live" />
+            )}
+          </button>
         </div>
         <span className="chat-panel__count mono">
           <span className="chat-panel__count-dot" aria-hidden="true" />
           {Number(viewerCount).toLocaleString()}
         </span>
       </div>
+
+      {/* Rejections come back on their own event with no context, so they're
+          shown wherever you are rather than only on the tab that caused them. */}
+      {pollError && (
+        <div className="chat-panel__poll-error" role="alert">
+          <span>{pollError}</span>
+          <button
+            type="button"
+            className="chat-panel__poll-error-close"
+            onClick={onDismissPollError}
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* ── Chat tab ── */}
       {tab === "chat" && (
@@ -161,31 +169,8 @@ export default function ChatPanel({
             aria-label="Chat messages"
           >
             {messages.map((msg, index) => {
-              // A poll was created here — show the poll in its place. While it
-              // is the pinned one, the stream keeps a one-line marker instead so
-              // the same card isn't on screen twice.
-              const poll = cardByIndex.get(index);
-              if (poll) {
-                if (activePoll && poll.id === activePoll.id) {
-                  return (
-                    <p key={`poll-ref-${poll.id}`} className="chat-poll-ref mono">
-                      📊 Poll started — {poll.question}
-                    </p>
-                  );
-                }
-                return (
-                  <PollCard
-                    key={`poll-${poll.id}`}
-                    poll={poll}
-                    myVote={myVoteIn(poll)}
-                    isHost={isHost}
-                    onVote={handleVote}
-                    onEnd={handleEndPoll}
-                  />
-                );
-              }
-              // Votes and close events are plumbing; never render them as text.
-              if (isPollEvent(msg.content)) return null;
+              // Leftovers from when polls were encoded into the chat stream.
+              if (isLegacyPollMessage(msg.content)) return null;
 
               // Backend message shape: { messageId, senderId, senderDisplayName, content, timestamp }
               const name = msg.senderDisplayName || 'Viewer';
@@ -219,7 +204,8 @@ export default function ChatPanel({
                 myVote={myVoteIn(activePoll)}
                 isHost={isHost}
                 onVote={handleVote}
-                onEnd={handleEndPoll}
+                onClose={handleEndPoll}
+                pending={pollPending}
               />
             </div>
           )}
@@ -240,6 +226,14 @@ export default function ChatPanel({
                   Cancel
                 </button>
               </div>
+
+              {/* Core allows one open poll per room and rejects a second, so
+                  the way to a new question is to end the current one first. */}
+              {activePoll && (
+                <p className="poll-form__note mono">
+                  End “{activePoll.title}” before starting another poll.
+                </p>
+              )}
 
               <input
                 type="text"
@@ -300,9 +294,9 @@ export default function ChatPanel({
                 <button
                   type="submit"
                   className="poll-form__launch"
-                  disabled={!canLaunchPoll}
+                  disabled={!canLaunchPoll || Boolean(activePoll) || pollPending}
                 >
-                  {activePoll ? "Replace live poll" : "Start poll"}
+                  {pollPending ? "Starting…" : "Start poll"}
                 </button>
               </div>
             </form>
@@ -359,6 +353,35 @@ export default function ChatPanel({
             </>
           )}
         </>
+      )}
+
+      {/* ── Polls tab ── */}
+      {tab === "polls" && (
+        <div className="chat-panel__polls">
+          {polls.length === 0 ? (
+            <p className="chat-panel__empty mono">
+              {isHost
+                ? "No polls yet. Start one from the chat composer."
+                : "No polls yet. The host can start one at any time."}
+            </p>
+          ) : (
+            /* Newest first — the one that matters is the one running now. */
+            polls
+              .slice()
+              .reverse()
+              .map((poll) => (
+                <PollCard
+                  key={poll.pollId}
+                  poll={poll}
+                  myVote={myVoteIn(poll)}
+                  isHost={isHost}
+                  onVote={handleVote}
+                  onClose={handleEndPoll}
+                  pending={pollPending}
+                />
+              ))
+          )}
+        </div>
       )}
 
       {/* ── Viewers tab ── */}
