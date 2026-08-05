@@ -1,0 +1,312 @@
+.stats-page {
+  padding: 48px 0 80px;
+  min-height: 100vh;
+}
+
+.stats-container {
+  max-width: 760px;
+}
+
+.stats-loading,
+.stats-error {
+  text-align: center;
+  padding: 80px 0;
+  color: var(--mute);
+  font-size: 14px;
+}
+
+/* ── Header ── */
+.stats-back {
+  display: inline-block;
+  color: var(--mute);
+  font-size: 13px;
+  margin-bottom: 20px;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.stats-back:hover { color: var(--cream); }
+
+.stats-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--marquee);
+  margin-bottom: 8px;
+}
+
+.stats-title {
+  font-size: clamp(26px, 4vw, 38px);
+  margin-bottom: 10px;
+}
+
+.stats-badges {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.stats-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+.stats-badge--ended { background: rgba(255,90,60,0.15); color: var(--marquee); }
+.stats-badge--live  { background: rgba(74,222,128,0.15); color: var(--success, #4ADE80); }
+.stats-badge--waiting { background: rgba(255,255,255,0.08); color: var(--mute); }
+
+/* Socket state — these numbers only move while the connection is up, so it
+   has to be visible whether they're current or frozen. */
+.stats-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  color: var(--mute);
+}
+
+.stats-live__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mute);
+}
+
+.stats-live--on { color: var(--success, #4ADE80); }
+.stats-live--on .stats-live__dot {
+  background: var(--success, #4ADE80);
+  animation: stats-pulse 2s ease-in-out infinite;
+}
+
+@keyframes stats-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+
+.stats-empty {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--mute);
+  background: var(--ink-raised);
+  border: 1.5px solid var(--velvet);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+}
+
+/* ── Stat cards ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin: 32px 0;
+}
+
+.stat-card {
+  background: var(--ink-raised);
+  border: 1.5px solid var(--velvet);
+  border-radius: var(--radius-md);
+  padding: 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-card__value {
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--cream);
+  line-height: 1;
+}
+
+.stat-card__label {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--marquee);
+}
+
+.stat-card__sub {
+  font-size: 12px;
+  color: var(--mute);
+  margin-top: 2px;
+}
+
+/* ── Sections ── */
+.stats-section {
+  margin-bottom: 36px;
+}
+
+.stats-section__title {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--mute);
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--velvet);
+}
+
+/* ── Poll results ── */
+.stats-polls { display: flex; flex-direction: column; gap: 12px; }
+
+.poll-result {
+  background: var(--ink-raised);
+  border: 1.5px solid var(--velvet);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.poll-result__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.poll-result__title { font-size: 15px; font-weight: 600; color: var(--cream); }
+
+.poll-result__status { font-size: 10.5px; letter-spacing: 0.1em; }
+.poll-result__status--open   { color: var(--success, #4ADE80); }
+.poll-result__status--closed { color: var(--mute); }
+
+.poll-result__options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.poll-result__option-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.poll-result__option-name {
+  font-size: 13.5px;
+  color: var(--cream);
+}
+
+.poll-result__lead {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  color: var(--marquee);
+  background: rgba(255,90,60,0.1);
+  padding: 2px 7px;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+
+.poll-result__option-votes {
+  font-size: 11.5px;
+  color: var(--mute);
+  white-space: nowrap;
+}
+
+.poll-result__bar {
+  height: 6px;
+  background: var(--velvet);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.poll-result__bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--marquee);
+  transition: width 0.4s ease-out;
+}
+
+.poll-result__total {
+  font-size: 11.5px;
+  color: var(--mute);
+  padding-top: 2px;
+  border-top: 1px solid var(--velvet);
+}
+
+.poll-result__no-votes { font-size: 12px; color: var(--mute); }
+
+/* ── Activity feed ── */
+.stats-activity {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  background: var(--ink-raised);
+  border: 1.5px solid var(--velvet);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.stats-activity__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--cream-dim, var(--cream));
+}
+
+.stats-activity__row + .stats-activity__row {
+  border-top: 1px solid var(--velvet);
+}
+
+.stats-activity__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mute);
+  flex-shrink: 0;
+}
+
+.stats-activity__row--joined .stats-activity__dot { background: var(--success, #4ADE80); }
+.stats-activity__row--left   .stats-activity__dot { background: var(--marquee); }
+
+.stats-activity__text { flex: 1; min-width: 0; }
+
+.stats-activity__time {
+  font-size: 11.5px;
+  color: var(--mute);
+  flex-shrink: 0;
+}
+
+.stats-footnote {
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--mute);
+  padding-top: 20px;
+  border-top: 1px solid var(--velvet);
+}
+
+/* ── Occupancy bar ── */
+.stats-occupancy { display: flex; flex-direction: column; gap: 10px; }
+
+.stats-occupancy__bar {
+  height: 10px;
+  background: var(--velvet);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.stats-occupancy__fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s ease-out;
+}
+
+.stats-occupancy__label { font-size: 13px; color: var(--mute); }
+
+@media (max-width: 520px) {
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+}
