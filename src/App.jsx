@@ -11,6 +11,7 @@ import CreateRoom from './pages/CreateRoom';
 const RoomList  = lazy(() => import('./pages/RoomList'));
 const HostReady = lazy(() => import('./pages/HostReady'));
 const WatchRoom = lazy(() => import('./pages/WatchRoom'));
+const RoomStats = lazy(() => import('./pages/RoomStats'));   // ← lazy
 
 export default function App() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
               <Route path="/host/new" element={<CreateRoom />} />
               <Route path="/host/:roomId" element={<HostReady />} />
               <Route path="/room/:roomId" element={<WatchRoom />} />
+              <Route path="/rooms/:roomId/stats" element={<RoomStats />} />  {/* ← moved here */}
             </Route>
 
             <Route path="/" element={<Navigate to="/rooms" replace />} />
