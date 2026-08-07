@@ -13,6 +13,7 @@ jobs:
         with:
           node-version: "20" # Changed from "18" to "20"
       - run: npm ci && npm run build
+      - run: npm install -g netlify-cli
       - run: netlify deploy --prod --dir=dist
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
