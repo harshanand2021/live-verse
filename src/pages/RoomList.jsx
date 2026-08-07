@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import RoomCard from "../components/RoomCard";
+import RoomCard from "../components/Roomcard";
 import Button from "../components/Button";
 import { getAllLives, resolveInvite } from "../api/liveApi";
 import "./styles/RoomList.css";
