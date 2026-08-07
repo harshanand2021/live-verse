@@ -29,4 +29,5 @@ dist-ssr
 *.log
 
 #Environment-Files
-*.env.*
+*.env.deployment
+*.env
