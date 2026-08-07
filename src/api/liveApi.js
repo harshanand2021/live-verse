@@ -124,11 +124,32 @@ export const endLive = (id) =>
 export const getLiveComments = (id) =>
   api.get(`/api/rooms/${id}/messages/recent?limit=50`).then((res) => unwrap(res));
 
+// Chat file attachments: uploaded straight to Core (authenticated), which saves
+// the bytes to disk and hands back the {fileUrl, fileName, fileType, fileSize}
+// that gets embedded in a normal chat message — see api/chatFiles.js.
+export const uploadRoomFile = (roomId, file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return api
+    .post(`/api/rooms/${roomId}/files`, formData, {
+      // Let the browser set the multipart Content-Type (with boundary) itself —
+      // the axios instance's default "application/json" header must not win here.
+      headers: { "Content-Type": undefined },
+    })
+    .then((res) => unwrap(res));
+};
+
 export const addComment = (id, payload) =>
   api.post(`/api/rooms/${id}/messages`, payload).then((res) => unwrap(res));
 
 export const getLiveSeats = (id) =>
   api.get(`/api/rooms/${id}/seats`).then((res) => normalizeSeats(unwrap(res)));
+
+// Full poll history for a room (open and closed), oldest first — the WebSocket
+// only ever replays the single currently-open poll on connect, so the
+// analytics page needs this to show polls created earlier in the session.
+export const getRoomPolls = (id) =>
+  api.get(`/api/rooms/${id}/polls`).then((res) => unwrap(res) || []);
 
 export const claimSeat = (id, seatNumber) =>
   api.post(`/api/rooms/${id}/seats/${seatNumber}/book`).then((res) => unwrap(res));

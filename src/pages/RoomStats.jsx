@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getCurrentUser } from '../api/userApi';
-import { getLiveById, getLiveSeats } from '../api/liveApi';
+import { getLiveById, getLiveSeats, getRoomPolls } from '../api/liveApi';
 import { useRoomSocket } from '../api/useRoomSocket';
 import { normalizePoll, upsertPoll } from '../api/roomPolls';
 import './styles/RoomStats.css';
@@ -9,12 +9,17 @@ import './styles/RoomStats.css';
 /**
  * Live room stats.
  *
- * There is no stats endpoint on Core — everything here is assembled from what
- * the room already publishes:
+ * Most of this is assembled from what the room already publishes over the
+ * socket, since there's no durable stats endpoint for it:
  *   PARTICIPANT_COUNT      → who is connected, updated on every join and leave
  *   ACTIVITY_LOG(_HISTORY) → the last 20 joins and leaves, held in Quarkus memory
- *   POLL_ACTIVE / POLL_*   → whatever poll the room is running
+ *   POLL_ACTIVE / POLL_*   → live updates for whatever poll the room is running
  *   GET /api/rooms/{id}/seats → seat occupancy, which is the one durable number
+ *
+ * Polls are the exception: GET /api/rooms/{id}/polls loads the room's full
+ * poll history (every poll ever created there) on page load, and live socket
+ * events keep it up to date after that — so polls created before this page
+ * connected still show up, not just whichever one happens to be open now.
  *
  * The activity log lives only in the realtime service's memory, so it starts
  * from whatever backlog is there when this page connects and disappears when
@@ -61,14 +66,16 @@ export default function RoomStats() {
       try {
         setLoading(true);
         setError('');
-        const [roomData, seatData, user] = await Promise.all([
+        const [roomData, seatData, user, pollHistory] = await Promise.all([
           getLiveById(roomId),
           getLiveSeats(roomId),
           getCurrentUser(),
+          getRoomPolls(roomId),
         ]);
         setRoom(roomData);
         setSeats(seatData);
         setCurrentUser(user);
+        setPolls(pollHistory.map(normalizePoll).filter(Boolean));
       } catch (err) {
         setError(err.response?.data?.message || 'Could not load this room.');
       } finally {
@@ -207,8 +214,7 @@ export default function RoomStats() {
           <h2 className="stats-section__title mono">POLL RESULTS</h2>
           {polls.length === 0 ? (
             <p className="stats-empty mono">
-              No poll running. Only the poll the room is currently being asked
-              about is replayed to a new connection — earlier ones aren't.
+              No polls yet in this room.
             </p>
           ) : (
             <div className="stats-polls">

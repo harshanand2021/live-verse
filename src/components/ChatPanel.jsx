@@ -7,6 +7,12 @@ import {
   MIN_OPTIONS,
   isLegacyPollMessage,
 } from "../api/roomPolls";
+import {
+  ACCEPTED_FILE_TYPES,
+  MAX_FILE_SIZE_BYTES,
+  formatFileSize,
+  parseFileMessage,
+} from "../api/chatFiles";
 import "./styles/ChatPanel.css";
 
 const reactions = ['❤️', '😂', '😮', '👏', '🔥'];
@@ -37,6 +43,7 @@ export default function ChatPanel({
   id,
   messages = [],
   onSend,
+  onUploadFile,
   viewerCount = 0,
   isFullScreen,
   isOpen,
@@ -59,6 +66,9 @@ export default function ChatPanel({
   const [composer, setComposer] = useState("chat"); // 'chat' | 'poll'
   const [pollDraft, setPollDraft] = useState(EMPTY_POLL_DRAFT);
   const listRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const [fileUploading, setFileUploading] = useState(false);
+  const [fileError, setFileError] = useState("");
 
   const myVoteIn = (poll) => myVotes[poll.pollId] ?? null;
 
@@ -83,6 +93,36 @@ export default function ChatPanel({
   const handleEndPoll = (poll) => {
     if (!isHost || poll.closed) return;
     onClosePoll(poll);
+  };
+
+  const handlePickFile = () => {
+    if (fileUploading) return;
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // reset so picking the same file again still fires onChange
+    if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setFileError(
+        `"${file.name}" is too large — max ${formatFileSize(MAX_FILE_SIZE_BYTES)}.`
+      );
+      return;
+    }
+
+    setFileError("");
+    setFileUploading(true);
+    try {
+      await onUploadFile?.(file);
+    } catch (err) {
+      setFileError(
+        err?.response?.data?.message || "Upload failed. Try again."
+      );
+    } finally {
+      setFileUploading(false);
+    }
   };
 
   const pollDraftOptions = pollDraft.options.map((option) => option.trim());
@@ -159,6 +199,20 @@ export default function ChatPanel({
         </div>
       )}
 
+      {fileError && (
+        <div className="chat-panel__poll-error" role="alert">
+          <span>{fileError}</span>
+          <button
+            type="button"
+            className="chat-panel__poll-error-close"
+            onClick={() => setFileError("")}
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* ── Chat tab ── */}
       {tab === "chat" && (
         <>
@@ -175,6 +229,7 @@ export default function ChatPanel({
               // Backend message shape: { messageId, senderId, senderDisplayName, content, timestamp }
               const name = msg.senderDisplayName || 'Viewer';
               const time = formatTime(msg.timestamp);
+              const fileMeta = parseFileMessage(msg.content);
               return (
                 <div key={msg.messageId ?? `msg-${index}`} className="chat-msg">
                   <span
@@ -189,7 +244,45 @@ export default function ChatPanel({
                       <span className="chat-msg__name">{name}</span>
                       <span className="chat-msg__time mono">{time}</span>
                     </div>
-                    <p className="chat-msg__text">{msg.content}</p>
+                    {fileMeta ? (
+                      fileMeta.fileType === "image" ? (
+                        <a
+                          href={fileMeta.fileUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="chat-msg__file-image-link"
+                        >
+                          <img
+                            src={fileMeta.fileUrl}
+                            alt={fileMeta.fileName}
+                            className="chat-msg__file-image"
+                          />
+                        </a>
+                      ) : (
+                        <a
+                          href={fileMeta.fileUrl}
+                          download={fileMeta.fileName}
+                          className="chat-file-card"
+                        >
+                          <span className="chat-file-card__icon" aria-hidden="true">
+                            📄
+                          </span>
+                          <span className="chat-file-card__info">
+                            <span className="chat-file-card__name">
+                              {fileMeta.fileName}
+                            </span>
+                            <span className="chat-file-card__size mono">
+                              {formatFileSize(fileMeta.fileSize)}
+                            </span>
+                          </span>
+                          <span className="chat-file-card__download" aria-hidden="true">
+                            ⬇
+                          </span>
+                        </a>
+                      )
+                    ) : (
+                      <p className="chat-msg__text">{msg.content}</p>
+                    )}
                   </div>
                 </div>
               );
@@ -330,6 +423,25 @@ export default function ChatPanel({
                     📊
                   </button>
                 )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={ACCEPTED_FILE_TYPES}
+                  onChange={handleFileChange}
+                  style={{ display: "none" }}
+                  aria-hidden="true"
+                  tabIndex={-1}
+                />
+                <button
+                  type="button"
+                  className="chat-panel__file-btn"
+                  onClick={handlePickFile}
+                  disabled={fileUploading}
+                  title="Attach a file"
+                  aria-label="Attach a file"
+                >
+                  {fileUploading ? "…" : "📎"}
+                </button>
                 <input
                   type="text"
                   className="chat-panel__input"

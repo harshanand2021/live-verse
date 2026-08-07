@@ -9,7 +9,9 @@ import {
   getLiveComments,
   getLiveSeats,
   setLiveMedia,
+  uploadRoomFile,
 } from "../api/liveApi";
+import { buildFileMessage } from "../api/chatFiles";
 
 import ScreenPlayer from "../components/ScreenPlayer";
 import TheatreSeats from "../components/TheratreSeats";
@@ -602,6 +604,17 @@ export default function WatchRoom() {
     }
   };
 
+  // Upload the file to Core (saved to disk there), then send its URL as a
+  // normal chat message so it flows through the exact same persist-then-
+  // broadcast path as text — Quarkus never needs to know files exist.
+  const handleUploadFile = async (file) => {
+    const fileMeta = await uploadRoomFile(room.id, file);
+    const sent = sendChat(buildFileMessage(fileMeta));
+    if (!sent) {
+      console.warn("Chat socket not connected; file message not sent.");
+    }
+  };
+
   return (
     <div
       className={`watch-room ${isFullScreen ? "watch-room--fullscreen" : ""}`}
@@ -779,6 +792,7 @@ export default function WatchRoom() {
             id="room-chat"
             messages={messages}
             onSend={handleSend}
+            onUploadFile={handleUploadFile}
             users={users}
             // Who's actually connected right now, straight from the realtime
             // service — not how many seats happen to be booked.
