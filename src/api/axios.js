@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE = 'https://liveverse-backend-core-production.up.railway.app';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -21,7 +21,6 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Only bounce to login on a real auth failure for a non-auth request.
     const url = error.config?.url || "";
     const isAuthRequest = url.includes("/api/auth/");
     if (error.response?.status === 401 && !isAuthRequest) {
