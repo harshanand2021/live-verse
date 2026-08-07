@@ -5,7 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AppShell from './components/AppShell';
 
 import Login from './pages/Login';
-import Signup from './pages/Signup';
+import Signup from '../src/pages/SignUp';  // ← updated import path
 import CreateRoom from './pages/CreateRoom';
 
 const RoomList  = lazy(() => import('./pages/RoomList'));

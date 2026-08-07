@@ -1,0 +1,19 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+      - run: npm ci && npm run build
+      - run: netlify deploy --prod --dir=dist
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.nfp_xYeYBPMvirJbDVx8EoJUUHdYj4UvL5UY3f7e}}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
