@@ -15,5 +15,5 @@ jobs:
       - run: npm ci && npm run build
       - run: netlify deploy --prod --dir=dist
         env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.nfp_xYeYBPMvirJbDVx8EoJUUHdYj4UvL5UY3f7e}}
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
